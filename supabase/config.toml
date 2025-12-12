@@ -1,1 +1,4 @@
 project_id = "poaeniuzweejpwdxhzvf"
+
+[functions.trainsurf]
+verify_jwt = false

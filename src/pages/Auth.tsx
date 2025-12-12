@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/Logo";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -14,6 +15,22 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ email: "", password: "", confirmPassword: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      if (session?.user) {
+        navigate("/dashboard");
+      }
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        navigate("/dashboard");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const validateEmail = (email: string) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -46,13 +63,50 @@ export default function Auth() {
     if (Object.keys(newErrors).length > 0) return;
 
     setLoading(true);
-    // Simulate auth - replace with Supabase auth
-    setTimeout(() => {
-      localStorage.setItem("trainsurf_user", JSON.stringify({ email: form.email }));
-      toast({ title: isLogin ? "Welcome back!" : "Account created!" });
-      navigate("/dashboard");
+
+    try {
+      if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: form.email,
+          password: form.password,
+        });
+
+        if (error) {
+          if (error.message.includes("Invalid login credentials")) {
+            toast({ title: "Invalid email or password", variant: "destructive" });
+          } else {
+            toast({ title: error.message, variant: "destructive" });
+          }
+          return;
+        }
+
+        toast({ title: "Welcome back!" });
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email: form.email,
+          password: form.password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/dashboard`,
+          },
+        });
+
+        if (error) {
+          if (error.message.includes("already registered")) {
+            toast({ title: "This email is already registered. Try signing in.", variant: "destructive" });
+          } else {
+            toast({ title: error.message, variant: "destructive" });
+          }
+          return;
+        }
+
+        toast({ title: "Account created successfully!" });
+      }
+    } catch (error) {
+      console.error("Auth error:", error);
+      toast({ title: "Something went wrong", variant: "destructive" });
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
