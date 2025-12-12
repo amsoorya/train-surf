@@ -14,7 +14,72 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      search_history: {
+        Row: {
+          class_type: string
+          created_at: string
+          destination: string
+          id: string
+          journey_date: string
+          quota: string
+          seat_changes: number | null
+          segments: Json | null
+          source: string
+          success: boolean
+          train_no: string
+          user_id: string
+        }
+        Insert: {
+          class_type: string
+          created_at?: string
+          destination: string
+          id?: string
+          journey_date: string
+          quota: string
+          seat_changes?: number | null
+          segments?: Json | null
+          source: string
+          success?: boolean
+          train_no: string
+          user_id: string
+        }
+        Update: {
+          class_type?: string
+          created_at?: string
+          destination?: string
+          id?: string
+          journey_date?: string
+          quota?: string
+          seat_changes?: number | null
+          segments?: Json | null
+          source?: string
+          success?: boolean
+          train_no?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

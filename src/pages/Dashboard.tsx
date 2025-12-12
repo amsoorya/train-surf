@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,14 +13,16 @@ import { TrainSurfRequest, TrainSurfResult, CLASS_OPTIONS, QUOTA_OPTIONS } from 
 import { CalendarIcon, History, Rocket, LogOut } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import type { User } from "@supabase/supabase-js";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TrainSurfResult | null>(null);
-  const [date, setDate] = useState<Date>();
+  const [date, setDate] = useState<Date>(new Date());
   const [formData, setFormData] = useState<Partial<TrainSurfRequest>>({
     trainNo: "",
     source: "",
@@ -27,6 +30,24 @@ export default function Dashboard() {
     classType: "",
     quota: "GN",
   });
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setUser(session?.user ?? null);
+      if (!session?.user) {
+        navigate("/auth");
+      }
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (!session?.user) {
+        navigate("/auth");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,40 +60,67 @@ export default function Dashboard() {
     setLoading(true);
     setResult(null);
 
-    // Simulate API call - replace with actual edge function call
-    setTimeout(() => {
-      const mockResult: TrainSurfResult = {
-        success: true,
-        segments: [
-          { from: formData.source!, to: "INT1", status: "AVAILABLE-45", isAvailable: true },
-          { from: "INT1", to: formData.destination!, status: "RAC-12", isAvailable: true },
-        ],
-        seatChanges: 1,
-        apiCalls: 8,
-        totalStations: 12,
-      };
-      setResult(mockResult);
-      setLoading(false);
-      
-      // Save to history
-      const history = JSON.parse(localStorage.getItem("trainsurf_history") || "[]");
-      history.unshift({
-        id: Date.now().toString(),
-        ...formData,
-        date: format(date, "yyyy-MM-dd"),
-        seatChanges: mockResult.seatChanges,
-        success: mockResult.success,
-        timestamp: new Date().toISOString(),
-        segments: mockResult.segments,
+    try {
+      const response = await supabase.functions.invoke("trainsurf", {
+        body: {
+          trainNo: formData.trainNo,
+          source: formData.source,
+          destination: formData.destination,
+          date: format(date, "yyyy-MM-dd"),
+          classType: formData.classType,
+          quota: formData.quota || "GN",
+        } as TrainSurfRequest,
       });
-      localStorage.setItem("trainsurf_history", JSON.stringify(history.slice(0, 50)));
-    }, 3000);
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const resultData = response.data as TrainSurfResult;
+      setResult(resultData);
+
+      // Save to history
+      if (user) {
+        await supabase.from("search_history").insert([{
+          user_id: user.id,
+          train_no: formData.trainNo!,
+          source: formData.source!,
+          destination: formData.destination!,
+          journey_date: format(date, "yyyy-MM-dd"),
+          class_type: formData.classType!,
+          quota: formData.quota || "GN",
+          seat_changes: resultData.seatChanges,
+          success: resultData.success,
+          segments: JSON.parse(JSON.stringify(resultData.segments)),
+        }]);
+      }
+
+      if (resultData.success) {
+        toast({ title: `Found path with ${resultData.seatChanges} seat change(s)!` });
+      } else {
+        toast({ title: "No available path found", variant: "destructive" });
+      }
+    } catch (error) {
+      console.error("TrainSurf error:", error);
+      toast({ 
+        title: "Error running algorithm", 
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive" 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
   };
 
   const resetForm = () => {
     setResult(null);
     setFormData({ trainNo: "", source: "", destination: "", classType: "", quota: "GN" });
-    setDate(undefined);
+    setDate(new Date());
   };
 
   return (
@@ -84,10 +132,10 @@ export default function Dashboard() {
         subtitle="Find optimal seat combinations with minimal changes"
       >
         <div className="flex gap-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/history")} className="text-primary-foreground">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/history")} className="text-primary-foreground hover:bg-primary-foreground/20">
             <History className="w-5 h-5" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => navigate("/auth")} className="text-primary-foreground">
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-primary-foreground hover:bg-primary-foreground/20">
             <LogOut className="w-5 h-5" />
           </Button>
         </div>
@@ -134,17 +182,17 @@ export default function Dashboard() {
                 <Label>Journey Date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal h-12")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : "Select date"}
+                      {format(date, "PPP")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
                       selected={date}
-                      onSelect={setDate}
-                      disabled={(d) => d < new Date()}
+                      onSelect={(d) => d && setDate(d)}
+                      disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))}
                       initialFocus
                       className="pointer-events-auto"
                     />
@@ -156,7 +204,7 @@ export default function Dashboard() {
                 <div>
                   <Label>Class</Label>
                   <Select value={formData.classType} onValueChange={(v) => setFormData({ ...formData, classType: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectTrigger className="h-12"><SelectValue placeholder="Select" /></SelectTrigger>
                     <SelectContent>
                       {CLASS_OPTIONS.map((c) => (
                         <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
@@ -167,7 +215,7 @@ export default function Dashboard() {
                 <div>
                   <Label>Quota</Label>
                   <Select value={formData.quota} onValueChange={(v) => setFormData({ ...formData, quota: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectTrigger className="h-12"><SelectValue placeholder="Select" /></SelectTrigger>
                     <SelectContent>
                       {QUOTA_OPTIONS.map((q) => (
                         <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>
