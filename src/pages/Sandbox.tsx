@@ -3,12 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ResultsDisplay } from "@/components/ResultsDisplay";
-import { StationAutocomplete } from "@/components/StationAutocomplete";
-import { Segment, TrainSurfResult, CLASS_OPTIONS, QUOTA_OPTIONS } from "@/types/trainsurf";
-import { ArrowLeft, Play, Info, Sparkles, Route, ChevronRight, Zap, Target, Lightbulb, Train, ArrowRightLeft } from "lucide-react";
+import { AllPathsDisplay } from "@/components/JourneyPathDisplay";
+import { Segment, TrainSurfResult, PathOption, CLASS_OPTIONS, QUOTA_OPTIONS } from "@/types/trainsurf";
+import { ArrowLeft, Play, Info, Sparkles, Route, ChevronRight, Zap, Target, Lightbulb, Train, RefreshCw } from "lucide-react";
 
 // 15 Mock trains with varied routes for testing
 const MOCK_TRAINS = [
@@ -51,7 +49,7 @@ const MOCK_TRAINS = [
   {
     id: "12423",
     name: "Dibrugarh Rajdhani",
-    route: ["NDLS", "CNB", "LKO", "GKP", "MFP", "KIR", "NJP", "AGTL", "DBRG"],
+    route: ["NDLS", "CNB", "LKO", "GKP", "MFP", "KIR", "NJP", "DBRG"],
     description: "New Delhi to Dibrugarh"
   },
   {
@@ -107,54 +105,23 @@ const MOCK_TRAINS = [
 // Enhanced mock scenarios
 const MOCK_SCENARIOS = [
   {
-    id: "direct",
-    name: "Direct Available",
-    description: "Full journey in one booking",
-    icon: "🎯",
-    hops: 0
-  },
-  {
-    id: "minimum_hops",
-    name: "Minimum Hops (1-2)",
-    description: "Optimal with fewest changes",
-    icon: "✨",
-    hops: 1
-  },
-  {
-    id: "medium_hops",
-    name: "Medium Hops (3-4)",
-    description: "Moderate seat changes",
-    icon: "🔄",
-    hops: 3
-  },
-  {
-    id: "maximum_hops",
-    name: "Maximum Hops",
-    description: "Every station hop",
-    icon: "🔁",
-    hops: -1
-  },
-  {
-    id: "overlapping",
-    name: "Overlapping Segments",
-    description: "Segments overlap at stations",
-    icon: "🔀",
-    hops: 2
-  },
-  {
-    id: "wl_path",
-    name: "Waitlist Alert",
-    description: "WL seats could complete path",
-    icon: "⚠️",
-    hops: 2
-  },
-  {
     id: "no_path",
     name: "No Path Found",
     description: "All segments unavailable",
     icon: "❌",
-    hops: 0
-  }
+  },
+  {
+    id: "direct",
+    name: "Direct Available",
+    description: "Full journey in one booking",
+    icon: "🎯",
+  },
+  {
+    id: "hops_available",
+    name: "Hops Available",
+    description: "Multiple paths with seat changes",
+    icon: "🔀",
+  },
 ];
 
 export default function Sandbox() {
@@ -181,13 +148,82 @@ export default function Sandbox() {
     }
   };
 
+  const generatePaths = (route: string[], srcIdx: number, dstIdx: number): PathOption[] => {
+    const relevantRoute = route.slice(srcIdx, dstIdx + 1);
+    const paths: PathOption[] = [];
+
+    // Generate 2-hop path
+    if (relevantRoute.length >= 3) {
+      const mid = Math.floor(relevantRoute.length / 2);
+      paths.push({
+        segments: [
+          { from: relevantRoute[0], to: relevantRoute[mid], status: `AVL ${Math.floor(Math.random() * 30) + 5}`, isAvailable: true },
+          { from: relevantRoute[mid], to: relevantRoute[relevantRoute.length - 1], status: `AVL ${Math.floor(Math.random() * 20) + 3}`, isAvailable: true }
+        ],
+        seatChanges: 1,
+        type: 'hops',
+        description: '2-Hop Path'
+      });
+    }
+
+    // Generate 3-hop path
+    if (relevantRoute.length >= 4) {
+      const third = Math.floor(relevantRoute.length / 3);
+      const twoThird = Math.floor((relevantRoute.length * 2) / 3);
+      paths.push({
+        segments: [
+          { from: relevantRoute[0], to: relevantRoute[third], status: `AVL ${Math.floor(Math.random() * 25) + 5}`, isAvailable: true },
+          { from: relevantRoute[third], to: relevantRoute[twoThird], status: `RAC ${Math.floor(Math.random() * 10) + 1}`, isAvailable: true },
+          { from: relevantRoute[twoThird], to: relevantRoute[relevantRoute.length - 1], status: `AVL ${Math.floor(Math.random() * 15) + 3}`, isAvailable: true }
+        ],
+        seatChanges: 2,
+        type: 'hops',
+        description: '3-Hop Path'
+      });
+    }
+
+    // Generate overlapping path
+    if (relevantRoute.length >= 5) {
+      const mid = Math.floor(relevantRoute.length / 2);
+      paths.push({
+        segments: [
+          { from: relevantRoute[0], to: relevantRoute[mid + 1], status: `AVL ${Math.floor(Math.random() * 20) + 10}`, isAvailable: true },
+          { from: relevantRoute[mid - 1], to: relevantRoute[relevantRoute.length - 1], status: `AVL ${Math.floor(Math.random() * 15) + 5}`, isAvailable: true }
+        ],
+        seatChanges: 1,
+        type: 'hops',
+        description: 'Overlapping Segments'
+      });
+    }
+
+    // Generate maximum hops path
+    if (relevantRoute.length >= 3) {
+      const maxSegments: Segment[] = [];
+      for (let i = 0; i < relevantRoute.length - 1; i++) {
+        maxSegments.push({
+          from: relevantRoute[i],
+          to: relevantRoute[i + 1],
+          status: `AVL ${Math.floor(Math.random() * 20) + 3}`,
+          isAvailable: true
+        });
+      }
+      paths.push({
+        segments: maxSegments,
+        seatChanges: maxSegments.length - 1,
+        type: 'hops',
+        description: `Maximum Hops (${maxSegments.length - 1})`
+      });
+    }
+
+    return paths;
+  };
+
   const runSimulation = async () => {
     if (!train || !selectedScenario || !sourceStation || !destStation) return;
 
     setIsRunning(true);
     setResult(null);
 
-    // Simulate algorithm execution delay
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     const route = train.route;
@@ -201,112 +237,83 @@ export default function Sandbox() {
         seatChanges: 0,
         apiCalls: 1,
         totalStations: route.length,
-        error: "Invalid station selection"
+        error: "Invalid station selection",
+        allPaths: []
       });
       setIsRunning(false);
       return;
     }
 
     const relevantRoute = route.slice(srcIdx, dstIdx + 1);
-    let segments: Segment[] = [];
+    let allPaths: PathOption[] = [];
+    let wlPath: PathOption | undefined;
     let success = true;
-    let seatChanges = 0;
 
     switch (selectedScenario) {
       case "direct":
-        segments = [{
-          from: relevantRoute[0],
-          to: relevantRoute[relevantRoute.length - 1],
-          status: `AVL ${Math.floor(Math.random() * 50) + 10}`,
-          isAvailable: true
-        }];
-        seatChanges = 0;
-        break;
-
-      case "minimum_hops":
-        const mid1 = Math.floor(relevantRoute.length / 2);
-        segments = [
-          { from: relevantRoute[0], to: relevantRoute[mid1], status: `AVL ${Math.floor(Math.random() * 30) + 5}`, isAvailable: true },
-          { from: relevantRoute[mid1], to: relevantRoute[relevantRoute.length - 1], status: `RAC ${Math.floor(Math.random() * 10) + 1}`, isAvailable: true }
-        ];
-        seatChanges = 1;
-        break;
-
-      case "medium_hops":
-        const step = Math.max(1, Math.floor(relevantRoute.length / 4));
-        segments = [];
-        for (let i = 0; i < relevantRoute.length - 1; i += step) {
-          const end = Math.min(i + step, relevantRoute.length - 1);
-          if (i < end) {
-            segments.push({
-              from: relevantRoute[i],
-              to: relevantRoute[end],
-              status: `AVL ${Math.floor(Math.random() * 25) + 5}`,
-              isAvailable: true
-            });
-          }
-        }
-        seatChanges = segments.length - 1;
-        break;
-
-      case "maximum_hops":
-        segments = [];
-        for (let i = 0; i < relevantRoute.length - 1; i++) {
-          segments.push({
-            from: relevantRoute[i],
-            to: relevantRoute[i + 1],
-            status: `AVL ${Math.floor(Math.random() * 20) + 3}`,
+        allPaths = [{
+          segments: [{
+            from: relevantRoute[0],
+            to: relevantRoute[relevantRoute.length - 1],
+            status: `AVL ${Math.floor(Math.random() * 50) + 10}`,
             isAvailable: true
-          });
-        }
-        seatChanges = segments.length - 1;
+          }],
+          seatChanges: 0,
+          type: 'direct',
+          description: 'Direct Booking Available'
+        }];
         break;
 
-      case "overlapping":
-        // Demonstrate overlapping segments: 0-5 and 4-10 style
-        const overlap = Math.floor(relevantRoute.length / 3);
-        const mid = Math.floor(relevantRoute.length / 2);
-        segments = [
-          { from: relevantRoute[0], to: relevantRoute[mid + 1], status: `AVL ${Math.floor(Math.random() * 20) + 10}`, isAvailable: true },
-          { from: relevantRoute[mid - 1], to: relevantRoute[relevantRoute.length - 1], status: `AVL ${Math.floor(Math.random() * 15) + 5}`, isAvailable: true }
-        ];
-        seatChanges = 1;
-        break;
-
-      case "wl_path":
+      case "hops_available":
+        allPaths = generatePaths(route, srcIdx, dstIdx);
+        
+        // Add WL path as fallback
         const wlMid = Math.floor(relevantRoute.length / 2);
-        segments = [
-          { from: relevantRoute[0], to: relevantRoute[wlMid], status: `AVL ${Math.floor(Math.random() * 20) + 5}`, isAvailable: true },
-          { from: relevantRoute[wlMid], to: relevantRoute[relevantRoute.length - 1], status: "WL 8", isAvailable: false }
-        ];
-        seatChanges = 1;
-        success = false;
+        wlPath = {
+          segments: [
+            { from: relevantRoute[0], to: relevantRoute[wlMid], status: `AVL ${Math.floor(Math.random() * 20) + 5}`, isAvailable: true },
+            { from: relevantRoute[wlMid], to: relevantRoute[relevantRoute.length - 1], status: "WL 8", isAvailable: false }
+          ],
+          seatChanges: 1,
+          type: 'wl_partial',
+          description: 'Partial WL - May Confirm'
+        };
         break;
 
       case "no_path":
-        segments = [{
-          from: relevantRoute[0],
-          to: relevantRoute[relevantRoute.length - 1],
-          status: "WL 45",
-          isAvailable: false
-        }];
         success = false;
+        wlPath = {
+          segments: [{
+            from: relevantRoute[0],
+            to: relevantRoute[relevantRoute.length - 1],
+            status: "WL 45",
+            isAvailable: false
+          }],
+          seatChanges: 0,
+          type: 'wl_partial',
+          description: 'All Waitlisted'
+        };
         break;
     }
 
+    const bestPath = allPaths[0];
+
     setResult({
       success,
-      segments,
-      seatChanges,
+      segments: bestPath?.segments || [],
+      seatChanges: bestPath?.seatChanges || 0,
       apiCalls: relevantRoute.length - 1,
       totalStations: relevantRoute.length,
       debugInfo: [
         `Route: ${relevantRoute.join(" → ")}`,
         `Scenario: ${selectedScenario}`,
         `Total stations: ${relevantRoute.length}`,
-        `Seat changes: ${seatChanges}`,
-        success ? "✅ Path found successfully!" : "❌ No available path"
-      ]
+        `Paths found: ${allPaths.length}`,
+        success ? "✅ Path found successfully!" : "❌ No confirmed path"
+      ],
+      allPaths,
+      wlPath,
+      hasWLPath: !!wlPath
     });
 
     setIsRunning(false);
@@ -387,34 +394,44 @@ export default function Sandbox() {
         )}
 
         {result ? (
-          <div className="animate-slide-up">
-            <ResultsDisplay result={result} onRunAgain={resetSimulation} />
-            
-            {/* Show hops visualization */}
-            {result.success && result.segments.length > 1 && (
-              <div className="glass-card p-4 mt-4">
-                <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <ArrowRightLeft className="w-4 h-4 text-primary" />
-                  Seat Change Points ({result.seatChanges} hops)
-                </h4>
-                <div className="flex items-center flex-wrap gap-2">
-                  {result.segments.map((seg, idx) => (
-                    <div key={idx} className="flex items-center">
-                      <div className="px-3 py-1.5 rounded-lg bg-success/20 text-success text-sm font-medium">
-                        {seg.from} → {seg.to}
-                      </div>
-                      {idx < result.segments.length - 1 && (
-                        <div className="mx-2 w-6 h-6 rounded-full bg-warning/20 flex items-center justify-center">
-                          <span className="text-xs font-bold text-warning">↻</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+          <div className="animate-slide-up space-y-4">
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="glass-card p-4 text-center">
+                <p className="text-3xl font-bold text-primary">{result.allPaths?.length || 0}</p>
+                <p className="text-xs text-muted-foreground mt-1">Paths Found</p>
               </div>
-            )}
+              <div className="glass-card p-4 text-center">
+                <p className="text-3xl font-bold text-primary">{result.seatChanges}</p>
+                <p className="text-xs text-muted-foreground mt-1">Min Changes</p>
+              </div>
+              <div className="glass-card p-4 text-center">
+                <p className="text-3xl font-bold text-primary">{result.apiCalls}</p>
+                <p className="text-xs text-muted-foreground mt-1">API Calls</p>
+              </div>
+            </div>
+
+            {/* All Paths Display */}
+            <div className="glass-card p-4">
+              <AllPathsDisplay 
+                allPaths={result.allPaths || []}
+                wlPath={result.wlPath}
+              />
+            </div>
             
-            <div className="mt-4 p-4 bg-accent/10 border border-accent/30 rounded-xl">
+            {/* Actions */}
+            <div className="flex gap-3">
+              <Button
+                variant="gradient"
+                className="flex-1"
+                onClick={resetSimulation}
+              >
+                <RefreshCw className="w-4 h-4" />
+                New Test
+              </Button>
+            </div>
+
+            <div className="p-4 bg-accent/10 border border-accent/30 rounded-xl">
               <div className="flex items-start gap-2">
                 <Info className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
                 <p className="text-xs text-muted-foreground">
@@ -546,21 +563,23 @@ export default function Sandbox() {
                 <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">2</span>
                 Select Availability Scenario
               </Label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 {MOCK_SCENARIOS.map(s => (
                   <button
                     key={s.id}
                     type="button"
                     onClick={() => setSelectedScenario(s.id)}
-                    className={`p-3 rounded-xl border-2 transition-all text-left ${
+                    className={`p-4 rounded-xl border-2 transition-all text-left flex items-center gap-4 ${
                       selectedScenario === s.id 
                         ? "border-primary bg-primary/10" 
                         : "border-border hover:border-primary/50"
                     }`}
                   >
-                    <span className="text-lg">{s.icon}</span>
-                    <p className="font-semibold text-sm text-foreground mt-1">{s.name}</p>
-                    <p className="text-xs text-muted-foreground">{s.description}</p>
+                    <span className="text-2xl">{s.icon}</span>
+                    <div>
+                      <p className="font-semibold text-foreground">{s.name}</p>
+                      <p className="text-xs text-muted-foreground">{s.description}</p>
+                    </div>
                   </button>
                 ))}
               </div>
