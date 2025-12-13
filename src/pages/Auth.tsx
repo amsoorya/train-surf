@@ -7,6 +7,7 @@ import { Logo } from "@/components/Logo";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Phone } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { InstallPrompt } from "@/components/InstallPrompt";
 
 type AuthMode = "login" | "signup" | "forgot" | "phone";
 
@@ -215,6 +216,8 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <InstallPrompt />
+      
       <div className="header-gradient p-6 pb-20 flex-shrink-0">
         <div className="flex justify-center pt-8 animate-float">
           <Logo size="lg" />
@@ -223,7 +226,7 @@ export default function Auth() {
           Smart seat-stitching for Indian Railways
         </p>
         
-        {/* Tagline badges */}
+        {/* Feature badges */}
         <div className="flex justify-center gap-2 mt-4 animate-slide-up delay-200">
           <span className="px-3 py-1 rounded-full bg-primary-foreground/20 text-primary-foreground text-xs font-medium backdrop-blur-sm">
             🚄 Pan-India
@@ -437,21 +440,21 @@ export default function Auth() {
               <span className="text-lg">🚄</span>
             </div>
             <p className="text-xs font-medium text-foreground">All Trains</p>
-            <p className="text-xs text-muted-foreground">Pan-India coverage</p>
+            <p className="text-xs text-muted-foreground">Pan-India</p>
           </div>
           <div className="text-center p-3">
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
               <span className="text-lg">⚡</span>
             </div>
-            <p className="text-xs font-medium text-foreground">Instant</p>
-            <p className="text-xs text-muted-foreground">Real-time results</p>
+            <p className="text-xs font-medium text-foreground">Fast</p>
+            <p className="text-xs text-muted-foreground">Real-time</p>
           </div>
           <div className="text-center p-3">
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
               <span className="text-lg">✅</span>
             </div>
             <p className="text-xs font-medium text-foreground">Optimal</p>
-            <p className="text-xs text-muted-foreground">Min seat changes</p>
+            <p className="text-xs text-muted-foreground">Min changes</p>
           </div>
         </div>
       </div>

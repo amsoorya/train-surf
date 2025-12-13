@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Phone, Calendar, Users, Save, Star, Home, History, MessageCircle, FlaskConical } from "lucide-react";
+import { ArrowLeft, User, Phone, Calendar, Users, Save, Star, Home, History, MessageCircle, FlaskConical, Train, AlertCircle, HelpCircle, PhoneCall, Mail } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface ProfileData {
@@ -17,6 +17,18 @@ interface ProfileData {
   gender: string | null;
   email: string | null;
 }
+
+// Indian Railways Contact Information
+const RAILWAY_CONTACTS = [
+  { name: "IRCTC Customer Care", phone: "14646", email: "care@irctc.co.in", type: "enquiry" },
+  { name: "Railway Enquiry", phone: "139", email: null, type: "enquiry" },
+  { name: "Complaints (CPGRAMS)", phone: "1800-111-321", email: "railmadad@rb.railnet.gov.in", type: "complaint" },
+  { name: "RailMadad Helpline", phone: "139", email: "railmadad@rb.railnet.gov.in", type: "complaint" },
+  { name: "Security Helpline (RPF)", phone: "182", email: null, type: "security" },
+  { name: "Vigilance Complaints", phone: "1800-111-322", email: "cvo@rb.railnet.gov.in", type: "complaint" },
+  { name: "Unreserved Ticketing", phone: "14646", email: null, type: "enquiry" },
+  { name: "Catering Complaints", phone: "1800-111-321", email: "irctc.feedback@irctc.com", type: "complaint" },
+];
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -109,11 +121,12 @@ export default function Profile() {
     { icon: MessageCircle, label: "Contact Us", path: "/contact" },
     { icon: FlaskConical, label: "Tester", path: "/sandbox" },
     { icon: Star, label: "Favorites", path: "/favorites" },
+    { icon: Train, label: "Live Status", path: "/live-status" },
   ];
 
   return (
-    <div className="min-h-screen pb-8">
-      <Header title="My Profile" subtitle="Manage your account settings">
+    <div className="min-h-screen pb-24">
+      <Header title="My Profile" subtitle="Manage your account">
         <Button
           variant="ghost"
           size="icon"
@@ -210,20 +223,60 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Navigation Section */}
+        {/* Railway Contacts */}
         <div className="glass-card p-4 animate-slide-up delay-100">
-          <h3 className="font-semibold text-foreground mb-3">Quick Navigation</h3>
+          <div className="flex items-center gap-2 mb-3">
+            <Train className="w-5 h-5 text-primary" />
+            <h3 className="font-semibold text-foreground">Contact Railways</h3>
+          </div>
+          
           <div className="space-y-2">
+            {RAILWAY_CONTACTS.map((contact, idx) => (
+              <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
+                <div className="flex items-center gap-2 min-w-0">
+                  {contact.type === "enquiry" && <HelpCircle className="w-4 h-4 text-accent flex-shrink-0" />}
+                  {contact.type === "complaint" && <AlertCircle className="w-4 h-4 text-warning flex-shrink-0" />}
+                  {contact.type === "security" && <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{contact.name}</p>
+                    <p className="text-xs text-muted-foreground">{contact.phone}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  <a
+                    href={`tel:${contact.phone}`}
+                    className="p-2 rounded-lg bg-success/20 text-success hover:bg-success/30 transition-colors"
+                  >
+                    <PhoneCall className="w-4 h-4" />
+                  </a>
+                  {contact.email && (
+                    <a
+                      href={`mailto:${contact.email}`}
+                      className="p-2 rounded-lg bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
+                    >
+                      <Mail className="w-4 h-4" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Navigation Section */}
+        <div className="glass-card p-4 animate-slide-up delay-200">
+          <h3 className="font-semibold text-foreground mb-3">Quick Navigation</h3>
+          <div className="grid grid-cols-3 gap-2">
             {navItems.map((item) => (
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 transition-colors text-left"
+                className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-accent/50 transition-colors"
               >
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <item.icon className="w-5 h-5 text-primary" />
                 </div>
-                <span className="font-medium text-foreground">{item.label}</span>
+                <span className="text-xs font-medium text-foreground">{item.label}</span>
               </button>
             ))}
           </div>
