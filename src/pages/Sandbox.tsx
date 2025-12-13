@@ -42,24 +42,24 @@ const MOCK_SCENARIOS = [
   {
     id: "direct",
     name: "Direct Available",
-    description: "Full journey available in one booking",
+    description: "Full journey in one booking",
     icon: "🎯"
   },
   {
-    id: "one_change",
-    name: "One Seat Change",
-    description: "Needs 1 intermediate stop",
+    id: "minimum_hops",
+    name: "Minimum Hops",
+    description: "Fewest seat changes possible",
+    icon: "✨"
+  },
+  {
+    id: "maximum_hops",
+    name: "Maximum Hops",
+    description: "Multiple seat changes needed",
     icon: "🔄"
   },
   {
-    id: "two_changes",
-    name: "Two Seat Changes",
-    description: "Optimal path with 2 changes",
-    icon: "🎯🔄"
-  },
-  {
     id: "no_path",
-    name: "No Available Path",
+    name: "No Path Found",
     description: "All segments waitlisted",
     icon: "❌"
   }
@@ -100,7 +100,7 @@ export default function Sandbox() {
         seatChanges = 0;
         break;
 
-      case "one_change":
+      case "minimum_hops":
         const midPoint1 = Math.floor(route.length / 2);
         segments = [
           { from: route[0], to: route[midPoint1], status: "AVL 28", isAvailable: true },
@@ -109,15 +109,18 @@ export default function Sandbox() {
         seatChanges = 1;
         break;
 
-      case "two_changes":
-        const third = Math.floor(route.length / 3);
-        const twoThird = Math.floor((2 * route.length) / 3);
-        segments = [
-          { from: route[0], to: route[third], status: "AVL 31", isAvailable: true },
-          { from: route[third], to: route[twoThird], status: "AVL 8", isAvailable: true },
-          { from: route[twoThird], to: route[route.length - 1], status: "AVL 22", isAvailable: true }
-        ];
-        seatChanges = 2;
+      case "maximum_hops":
+        // Create segments for each station hop
+        segments = [];
+        for (let i = 0; i < route.length - 1; i++) {
+          segments.push({
+            from: route[i],
+            to: route[i + 1],
+            status: `AVL ${Math.floor(Math.random() * 30) + 5}`,
+            isAvailable: true
+          });
+        }
+        seatChanges = route.length - 2;
         break;
 
       case "no_path":
