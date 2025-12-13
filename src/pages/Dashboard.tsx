@@ -2,15 +2,16 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
 import { LoadingOverlay } from "@/components/LoadingSpinner";
 import { ResultsDisplay } from "@/components/ResultsDisplay";
+import { StationAutocomplete } from "@/components/StationAutocomplete";
 import { TrainSurfRequest, TrainSurfResult, CLASS_OPTIONS, QUOTA_OPTIONS } from "@/types/trainsurf";
-import { CalendarIcon, History, Rocket, LogOut } from "lucide-react";
+import { CalendarIcon, History, Rocket, LogOut, FlaskConical, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -132,6 +133,9 @@ export default function Dashboard() {
         subtitle="Find optimal seat combinations with minimal changes"
       >
         <div className="flex gap-2">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/sandbox")} className="text-primary-foreground hover:bg-primary-foreground/20">
+            <FlaskConical className="w-5 h-5" />
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => navigate("/history")} className="text-primary-foreground hover:bg-primary-foreground/20">
             <History className="w-5 h-5" />
           </Button>
@@ -142,11 +146,24 @@ export default function Dashboard() {
       </Header>
 
       <main className="px-4 -mt-4 space-y-6">
+        {/* Welcome banner */}
+        {!result && (
+          <div className="bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 rounded-xl p-4 animate-slide-up">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              <span className="font-semibold text-foreground text-sm">Pro Tip</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Enter station codes (e.g., NDLS, HWH) for faster search. Our AI finds the optimal path in seconds!
+            </p>
+          </div>
+        )}
+
         {result ? (
           <ResultsDisplay result={result} onRunAgain={resetForm} />
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="glass-card p-5 space-y-4">
+            <div className="glass-card p-5 space-y-4 animate-scale-in">
               <div>
                 <Label htmlFor="trainNo">Train Number</Label>
                 <Input
@@ -160,20 +177,20 @@ export default function Dashboard() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="source">From Station</Label>
-                  <Input
+                  <StationAutocomplete
                     id="source"
                     placeholder="e.g., NDLS"
-                    value={formData.source}
-                    onChange={(e) => setFormData({ ...formData, source: e.target.value.toUpperCase() })}
+                    value={formData.source || ""}
+                    onChange={(v) => setFormData({ ...formData, source: v })}
                   />
                 </div>
                 <div>
                   <Label htmlFor="destination">To Station</Label>
-                  <Input
+                  <StationAutocomplete
                     id="destination"
                     placeholder="e.g., HWH"
-                    value={formData.destination}
-                    onChange={(e) => setFormData({ ...formData, destination: e.target.value.toUpperCase() })}
+                    value={formData.destination || ""}
+                    onChange={(v) => setFormData({ ...formData, destination: v })}
                   />
                 </div>
               </div>
@@ -226,7 +243,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <Button type="submit" variant="gradient" size="xl" className="w-full">
+            <Button type="submit" variant="gradient" size="xl" className="w-full animate-slide-up delay-200">
               <Rocket className="w-5 h-5" />
               Run TrainSurf
             </Button>
