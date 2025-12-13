@@ -1,4 +1,4 @@
-# TrainSurf - Smart Seat Stitching for Indian Railways
+# TrainSurf — Smart Seat-Hop Search for Indian Railways
 
 <p align="center">
   <img src="public/train-icon-512.png" alt="TrainSurf Logo" width="120" />
@@ -16,6 +16,46 @@
   <a href="#getting-started">Getting Started</a> •
   <a href="#api-integration">API Integration</a>
 </p>
+
+---
+
+## Developer
+
+**Jaya Soorya**
+
+📧 Email: amjayasoorya@gmail.com
+
+📞 Phone: +91 9345259635
+
+🔗 GitHub: https://github.com/amsoorya
+
+---
+
+## Real Problem and Motivation
+
+TrainSurf is a developer-built, algorithm-driven project that explores a real-world problem faced by Indian Railways passengers: direct tickets often show unavailable even when a journey is still possible by intelligently booking shorter segments on the same train.
+
+This project was designed and implemented during my free time as a student developer, motivated by personal experience as a frequent hostel traveller.
+
+### My Story
+
+I am a hosteller, and trains are usually my default mode of transport.
+
+During one such journey, every direct ticket from my source to destination showed unavailable. I tried nearby stations as well, but still had no luck. Out of necessity, I manually checked segment-wise availability within the same train:
+
+- Source to next station
+- That station to next
+- And so on…
+
+Surprisingly, I was able to complete my entire journey by booking multiple short segments on the same train. I ended up doing around four seat hops across nearly ten stations, but it worked and got me home.
+
+That experience led to an important realization:
+
+**Existing railway apps like ixigo, ConfirmTkt, etc. do not attempt this computation at all.**
+
+The reason is understandable — the search space grows quickly and can be computationally heavy. But with the right techniques such as pruning, memoization, and priority-based search, it becomes manageable.
+
+This insight became the foundation of TrainSurf.
 
 ---
 
@@ -456,5 +496,5 @@ This project is for educational and personal use. The IRCTC API is subject to Ra
 ---
 
 <p align="center">
-  Made with ❤️ for Indian Railway Travelers
+  Made with ❤️ by Jaya Soorya for Indian Railway Travelers
 </p>

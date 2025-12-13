@@ -146,18 +146,7 @@ export default function Dashboard() {
       </Header>
 
       <main className="px-4 -mt-4 space-y-6">
-        {/* Welcome banner */}
-        {!result && (
-          <div className="bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 rounded-xl p-4 animate-slide-up">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary" />
-              <span className="font-semibold text-foreground text-sm">Pro Tip</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Enter station codes (e.g., NDLS, HWH) for faster search. Our AI finds the optimal path in seconds!
-            </p>
-          </div>
-        )}
+        {/* Removed Pro Tip banner */}
 
         {result ? (
           <ResultsDisplay result={result} onRunAgain={resetForm} />
