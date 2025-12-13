@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,6 +13,7 @@ interface TrainSurfRequest {
   date: string;
   classType: string;
   quota: string;
+  mode?: "normal" | "urgent";
 }
 
 interface Segment {
@@ -29,6 +31,26 @@ interface TrainSurfResult {
   totalStations: number;
   error?: string;
   debugInfo: string[];
+}
+
+// Rate limiting - simple in-memory store
+const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+
+function checkRateLimit(clientId: string): boolean {
+  const now = Date.now();
+  const limit = rateLimitStore.get(clientId);
+  
+  if (!limit || now > limit.resetTime) {
+    rateLimitStore.set(clientId, { count: 1, resetTime: now + 60000 }); // 1 minute window
+    return true;
+  }
+  
+  if (limit.count >= 10) { // Max 10 requests per minute
+    return false;
+  }
+  
+  limit.count++;
+  return true;
 }
 
 // Availability cache for memoization
@@ -459,6 +481,28 @@ serve(async (req) => {
   }
 
   try {
+    // Verify authorization header
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      console.error("Missing authorization header");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // Extract client identifier for rate limiting
+    const clientId = authHeader.split(" ")[1]?.substring(0, 20) || "anonymous";
+    
+    // Check rate limit
+    if (!checkRateLimit(clientId)) {
+      console.warn(`Rate limit exceeded for client: ${clientId}`);
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
     const apiKey = Deno.env.get("RAPIDAPI_KEY");
     if (!apiKey) {
       console.error("RAPIDAPI_KEY not configured");
@@ -469,12 +513,28 @@ serve(async (req) => {
     }
 
     const body: TrainSurfRequest = await req.json();
-    console.log("TrainSurf request:", body);
+    console.log("TrainSurf request:", { ...body, mode: body.mode || "urgent" });
 
-    const { trainNo, source, destination, date, classType, quota } = body;
+    const { trainNo, source, destination, date, classType, quota, mode = "urgent" } = body;
 
+    // Input validation
     if (!trainNo || !source || !destination || !date || !classType || !quota) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // Validate input format
+    if (!/^\d{4,5}$/.test(trainNo)) {
+      return new Response(JSON.stringify({ error: "Invalid train number format" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    if (!/^[A-Z]{2,5}$/.test(source.toUpperCase()) || !/^[A-Z]{2,5}$/.test(destination.toUpperCase())) {
+      return new Response(JSON.stringify({ error: "Invalid station code format" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
@@ -483,7 +543,32 @@ serve(async (req) => {
     // Clear cache for fresh results
     availabilityCache.clear();
 
-    // Step 1: Get train route
+    // Normal mode - only check direct availability
+    if (mode === "normal") {
+      console.log("Running in normal mode - checking direct availability only");
+      
+      const resp = await checkSeatAvailabilityRaw(trainNo, source.toUpperCase(), destination.toUpperCase(), date, classType, quota, apiKey);
+      const { isAvailable, status } = parseAvailabilityForDate(resp, date);
+
+      return new Response(JSON.stringify({
+        success: isAvailable,
+        segments: [{
+          from: source.toUpperCase(),
+          to: destination.toUpperCase(),
+          status,
+          isAvailable
+        }],
+        seatChanges: 0,
+        apiCalls: 1,
+        totalStations: 2,
+        debugInfo: ["Normal mode: checked direct availability only"]
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // Urgent mode - full seat-stitching algorithm
     console.log("Fetching train details...");
     let stationCodes: string[];
 
@@ -498,48 +583,38 @@ serve(async (req) => {
       } catch (e2) {
         console.error("Both route fetch methods failed:", e1, e2);
         return new Response(JSON.stringify({ 
-          error: `Could not fetch train route: ${e1}`,
-          success: false,
-          segments: [],
-          seatChanges: 0,
-          apiCalls: 0,
-          totalStations: 0,
-          debugInfo: [`Failed to fetch route: ${e1}`, `Fallback also failed: ${e2}`]
+          error: "Could not fetch train route. Please check the train number.",
+          debugInfo: [`Error 1: ${e1}`, `Error 2: ${e2}`]
         }), {
-          status: 200,
+          status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
       }
     }
 
-    console.log(`Route loaded: ${stationCodes.length} stations`);
+    console.log(`Found ${stationCodes.length} stations in route`);
 
     // Step 2: Slice route between source and destination
-    let slicedRoute: string[];
+    let route: string[];
     try {
-      slicedRoute = sliceRouteBetween(stationCodes, source, destination);
-    } catch (e) {
-      console.error("Route slicing failed:", e);
+      route = sliceRouteBetween(stationCodes, source, destination);
+    } catch (routeError) {
+      console.error("Route slicing error:", routeError);
       return new Response(JSON.stringify({ 
-        error: String(e),
-        success: false,
-        segments: [],
-        seatChanges: 0,
-        apiCalls: 0,
-        totalStations: stationCodes.length,
-        debugInfo: [`Route slicing failed: ${e}`]
+        error: routeError instanceof Error ? routeError.message : "Invalid route",
+        debugInfo: [`Full route: ${stationCodes.join(", ")}`]
       }), {
-        status: 200,
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    console.log(`Sliced route: ${slicedRoute.length} stations (${slicedRoute[0]} → ${slicedRoute[slicedRoute.length - 1]})`);
+    console.log(`Route segment: ${route.join(" → ")}`);
 
-    // Step 3: Run seat stitching algorithm
-    const result = await smartSeatStitching(slicedRoute, trainNo, date, classType, quota, apiKey);
+    // Step 3: Run the smart seat stitching algorithm
+    const result = await smartSeatStitching(route, trainNo, date, classType, quota, apiKey);
 
-    console.log("TrainSurf result:", { success: result.success, segments: result.segments.length, seatChanges: result.seatChanges });
+    console.log(`Result: success=${result.success}, segments=${result.segments.length}, apiCalls=${result.apiCalls}`);
 
     return new Response(JSON.stringify(result), {
       status: 200,
@@ -549,13 +624,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("TrainSurf error:", error);
     return new Response(JSON.stringify({ 
-      error: String(error),
-      success: false,
-      segments: [],
-      seatChanges: 0,
-      apiCalls: 0,
-      totalStations: 0,
-      debugInfo: [`Unexpected error: ${error}`]
+      error: error instanceof Error ? error.message : "Internal server error" 
     }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
