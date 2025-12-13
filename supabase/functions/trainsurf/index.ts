@@ -33,19 +33,19 @@ interface TrainSurfResult {
   debugInfo: string[];
 }
 
-// Rate limiting - simple in-memory store
+// Rate limiting - per user with in-memory store
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 
-function checkRateLimit(clientId: string): boolean {
+function checkRateLimit(userId: string): boolean {
   const now = Date.now();
-  const limit = rateLimitStore.get(clientId);
+  const limit = rateLimitStore.get(userId);
   
   if (!limit || now > limit.resetTime) {
-    rateLimitStore.set(clientId, { count: 1, resetTime: now + 60000 }); // 1 minute window
+    rateLimitStore.set(userId, { count: 1, resetTime: now + 60000 }); // 1 minute window
     return true;
   }
   
-  if (limit.count >= 10) { // Max 10 requests per minute
+  if (limit.count >= 10) { // Max 10 requests per minute per user
     return false;
   }
   
@@ -475,6 +475,34 @@ async function smartSeatStitching(
   };
 }
 
+// Validate user from JWT token
+async function validateUser(authHeader: string): Promise<{ userId: string } | null> {
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Missing Supabase configuration");
+      return null;
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const token = authHeader.replace("Bearer ", "");
+    
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error || !user) {
+      console.error("Invalid token:", error?.message);
+      return null;
+    }
+
+    return { userId: user.id };
+  } catch (error) {
+    console.error("Token validation error:", error);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -491,12 +519,21 @@ serve(async (req) => {
       });
     }
 
-    // Extract client identifier for rate limiting
-    const clientId = authHeader.split(" ")[1]?.substring(0, 20) || "anonymous";
+    // Validate user from JWT
+    const userValidation = await validateUser(authHeader);
+    if (!userValidation) {
+      return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    const { userId } = userValidation;
+    console.log(`Authenticated user: ${userId}`);
     
-    // Check rate limit
-    if (!checkRateLimit(clientId)) {
-      console.warn(`Rate limit exceeded for client: ${clientId}`);
+    // Check rate limit using authenticated user ID
+    if (!checkRateLimit(userId)) {
+      console.warn(`Rate limit exceeded for user: ${userId}`);
       return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
         status: 429,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -513,7 +550,7 @@ serve(async (req) => {
     }
 
     const body: TrainSurfRequest = await req.json();
-    console.log("TrainSurf request:", { ...body, mode: body.mode || "urgent" });
+    console.log("TrainSurf request:", { ...body, mode: body.mode || "urgent", userId });
 
     const { trainNo, source, destination, date, classType, quota, mode = "urgent" } = body;
 
@@ -533,8 +570,42 @@ serve(async (req) => {
       });
     }
 
-    if (!/^[A-Z]{2,5}$/.test(source.toUpperCase()) || !/^[A-Z]{2,5}$/.test(destination.toUpperCase())) {
+    if (!/^[A-Z]{2,5}$/i.test(source) || !/^[A-Z]{2,5}$/i.test(destination)) {
       return new Response(JSON.stringify({ error: "Invalid station code format" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // Validate date format (YYYY-MM-DD)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return new Response(JSON.stringify({ error: "Invalid date format. Use YYYY-MM-DD" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // Validate classType
+    const validClassTypes = ["1A", "2A", "3A", "SL", "CC", "2S", "3E", "EC", "EA"];
+    if (!validClassTypes.includes(classType.toUpperCase())) {
+      return new Response(JSON.stringify({ error: "Invalid class type" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // Validate quota
+    const validQuotas = ["GN", "TQ", "PT", "LD", "HP", "SS", "DF"];
+    if (!validQuotas.includes(quota.toUpperCase())) {
+      return new Response(JSON.stringify({ error: "Invalid quota" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // Validate mode
+    if (mode && !["normal", "urgent"].includes(mode)) {
+      return new Response(JSON.stringify({ error: "Invalid mode. Use 'normal' or 'urgent'" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
@@ -547,7 +618,7 @@ serve(async (req) => {
     if (mode === "normal") {
       console.log("Running in normal mode - checking direct availability only");
       
-      const resp = await checkSeatAvailabilityRaw(trainNo, source.toUpperCase(), destination.toUpperCase(), date, classType, quota, apiKey);
+      const resp = await checkSeatAvailabilityRaw(trainNo, source.toUpperCase(), destination.toUpperCase(), date, classType.toUpperCase(), quota.toUpperCase(), apiKey);
       const { isAvailable, status } = parseAvailabilityForDate(resp, date);
 
       return new Response(JSON.stringify({
@@ -584,7 +655,7 @@ serve(async (req) => {
         console.error("Both route fetch methods failed:", e1, e2);
         return new Response(JSON.stringify({ 
           error: "Could not fetch train route. Please check the train number.",
-          debugInfo: [`Error 1: ${e1}`, `Error 2: ${e2}`]
+          debugInfo: ["Route fetch failed"]
         }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -602,7 +673,7 @@ serve(async (req) => {
       console.error("Route slicing error:", routeError);
       return new Response(JSON.stringify({ 
         error: routeError instanceof Error ? routeError.message : "Invalid route",
-        debugInfo: [`Full route: ${stationCodes.join(", ")}`]
+        debugInfo: ["Route validation failed"]
       }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -612,7 +683,7 @@ serve(async (req) => {
     console.log(`Route segment: ${route.join(" → ")}`);
 
     // Step 3: Run the smart seat stitching algorithm
-    const result = await smartSeatStitching(route, trainNo, date, classType, quota, apiKey);
+    const result = await smartSeatStitching(route, trainNo, date, classType.toUpperCase(), quota.toUpperCase(), apiKey);
 
     console.log(`Result: success=${result.success}, segments=${result.segments.length}, apiCalls=${result.apiCalls}`);
 
@@ -624,7 +695,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("TrainSurf error:", error);
     return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : "Internal server error" 
+      error: "An error occurred processing your request"
     }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
