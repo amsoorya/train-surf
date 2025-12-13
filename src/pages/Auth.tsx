@@ -4,13 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/Logo";
-import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+type AuthMode = "login" | "signup" | "forgot";
+
 export default function Auth() {
   const navigate = useNavigate();
-  const [isLogin, setIsLogin] = useState(true);
+  const [mode, setMode] = useState<AuthMode>("login");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ email: "", password: "", confirmPassword: "" });
@@ -51,12 +53,14 @@ export default function Auth() {
       newErrors.email = "Please enter a valid email address";
     }
 
-    if (!validatePassword(form.password)) {
-      newErrors.password = "Password must be 8+ chars with at least 1 letter and 1 number";
-    }
+    if (mode !== "forgot") {
+      if (!validatePassword(form.password)) {
+        newErrors.password = "Password must be 8+ chars with at least 1 letter and 1 number";
+      }
 
-    if (!isLogin && form.password !== form.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
+      if (mode === "signup" && form.password !== form.confirmPassword) {
+        newErrors.confirmPassword = "Passwords do not match";
+      }
     }
 
     setErrors(newErrors);
@@ -65,7 +69,25 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      if (isLogin) {
+      if (mode === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(form.email, {
+          redirectTo: `${window.location.origin}/auth`,
+        });
+
+        if (error) {
+          toast({ title: error.message, variant: "destructive" });
+          return;
+        }
+
+        toast({ 
+          title: "Reset link sent!", 
+          description: "Check your email for password reset instructions." 
+        });
+        setMode("login");
+        return;
+      }
+
+      if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({
           email: form.email,
           password: form.password,
@@ -109,22 +131,52 @@ export default function Auth() {
     }
   };
 
+  const getTitle = () => {
+    switch (mode) {
+      case "login": return "Welcome Back";
+      case "signup": return "Create Account";
+      case "forgot": return "Reset Password";
+    }
+  };
+
+  const getTagline = () => {
+    switch (mode) {
+      case "login": return "Sign in to find your optimal journey";
+      case "signup": return "Join thousands of smart travelers";
+      case "forgot": return "We'll send you a reset link";
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="header-gradient p-6 pb-16 flex-shrink-0">
-        <div className="flex justify-center pt-8">
+      <div className="header-gradient p-6 pb-20 flex-shrink-0">
+        <div className="flex justify-center pt-8 animate-float">
           <Logo size="lg" />
         </div>
-        <p className="text-primary-foreground/80 text-center mt-3 text-sm">
+        <p className="text-primary-foreground/80 text-center mt-3 text-sm animate-slide-up">
           Smart seat-stitching for Indian Railways
         </p>
+        
+        {/* Tagline badges */}
+        <div className="flex justify-center gap-2 mt-4 animate-slide-up delay-200">
+          <span className="px-3 py-1 rounded-full bg-primary-foreground/20 text-primary-foreground text-xs font-medium backdrop-blur-sm">
+            <Sparkles className="w-3 h-3 inline mr-1" />
+            AI-Powered
+          </span>
+          <span className="px-3 py-1 rounded-full bg-primary-foreground/20 text-primary-foreground text-xs font-medium backdrop-blur-sm">
+            Instant Results
+          </span>
+        </div>
       </div>
 
-      <div className="flex-1 -mt-8 px-4">
-        <div className="glass-card p-6 max-w-md mx-auto">
-          <h2 className="text-2xl font-bold text-foreground text-center mb-6">
-            {isLogin ? "Welcome Back" : "Create Account"}
+      <div className="flex-1 -mt-12 px-4 pb-8">
+        <div className="glass-card p-6 max-w-md mx-auto animate-scale-in">
+          <h2 className="text-2xl font-bold text-foreground text-center mb-1">
+            {getTitle()}
           </h2>
+          <p className="text-muted-foreground text-sm text-center mb-6">
+            {getTagline()}
+          </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -143,30 +195,32 @@ export default function Auth() {
               {errors.email && <p className="text-destructive text-xs mt-1">{errors.email}</p>}
             </div>
 
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  className="pl-10 pr-10"
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
+            {mode !== "forgot" && (
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    className="pl-10 pr-10"
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                {errors.password && <p className="text-destructive text-xs mt-1">{errors.password}</p>}
               </div>
-              {errors.password && <p className="text-destructive text-xs mt-1">{errors.password}</p>}
-            </div>
+            )}
 
-            {!isLogin && (
+            {mode === "signup" && (
               <div>
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <div className="relative">
@@ -184,18 +238,75 @@ export default function Auth() {
               </div>
             )}
 
+            {mode === "login" && (
+              <div className="text-right">
+                <button 
+                  type="button" 
+                  onClick={() => setMode("forgot")} 
+                  className="text-sm text-primary hover:underline"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
+
             <Button type="submit" variant="gradient" size="lg" className="w-full" disabled={loading}>
-              {loading ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
+              {loading ? "Please wait..." : mode === "forgot" ? "Send Reset Link" : mode === "login" ? "Sign In" : "Create Account"}
               <ArrowRight className="w-4 h-4" />
             </Button>
           </form>
 
           <p className="text-center text-muted-foreground text-sm mt-6">
-            {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-            <button onClick={() => setIsLogin(!isLogin)} className="text-primary font-semibold">
-              {isLogin ? "Sign Up" : "Sign In"}
-            </button>
+            {mode === "login" && (
+              <>
+                Don't have an account?{" "}
+                <button onClick={() => setMode("signup")} className="text-primary font-semibold">
+                  Sign Up
+                </button>
+              </>
+            )}
+            {mode === "signup" && (
+              <>
+                Already have an account?{" "}
+                <button onClick={() => setMode("login")} className="text-primary font-semibold">
+                  Sign In
+                </button>
+              </>
+            )}
+            {mode === "forgot" && (
+              <>
+                Remember your password?{" "}
+                <button onClick={() => setMode("login")} className="text-primary font-semibold">
+                  Sign In
+                </button>
+              </>
+            )}
           </p>
+        </div>
+
+        {/* Feature highlights */}
+        <div className="mt-6 max-w-md mx-auto grid grid-cols-3 gap-3 animate-slide-up delay-300">
+          <div className="text-center p-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
+              <span className="text-lg">🚄</span>
+            </div>
+            <p className="text-xs font-medium text-foreground">All Trains</p>
+            <p className="text-xs text-muted-foreground">Pan-India coverage</p>
+          </div>
+          <div className="text-center p-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
+              <span className="text-lg">⚡</span>
+            </div>
+            <p className="text-xs font-medium text-foreground">Instant</p>
+            <p className="text-xs text-muted-foreground">Real-time results</p>
+          </div>
+          <div className="text-center p-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
+              <span className="text-lg">✅</span>
+            </div>
+            <p className="text-xs font-medium text-foreground">Optimal</p>
+            <p className="text-xs text-muted-foreground">Min seat changes</p>
+          </div>
         </div>
       </div>
     </div>
