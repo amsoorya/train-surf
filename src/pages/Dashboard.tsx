@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -10,20 +10,26 @@ import { Input } from "@/components/ui/input";
 import { LoadingOverlay } from "@/components/LoadingSpinner";
 import { ResultsDisplay } from "@/components/ResultsDisplay";
 import { StationAutocomplete } from "@/components/StationAutocomplete";
+import { OnboardingGuide } from "@/components/OnboardingGuide";
 import { TrainSurfRequest, TrainSurfResult, CLASS_OPTIONS, QUOTA_OPTIONS } from "@/types/trainsurf";
-import { CalendarIcon, History, Rocket, LogOut, FlaskConical, Sparkles } from "lucide-react";
+import { CalendarIcon, Rocket, Star, MapPin, Zap, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";
 
+type SearchMode = "normal" | "urgent";
+
 export default function Dashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TrainSurfResult | null>(null);
   const [date, setDate] = useState<Date>(new Date());
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [searchMode, setSearchMode] = useState<SearchMode>("urgent");
   const [formData, setFormData] = useState<Partial<TrainSurfRequest>>({
     trainNo: "",
     source: "",
@@ -42,13 +48,62 @@ export default function Dashboard() {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      if (!session?.user) {
+      if (session?.user) {
+        checkOnboardingStatus(session.user.id);
+      } else {
         navigate("/auth");
       }
     });
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  // Handle pre-filled data from navigation state
+  useEffect(() => {
+    if (location.state) {
+      const state = location.state as any;
+      setFormData({
+        trainNo: state.trainNo || "",
+        source: state.source || "",
+        destination: state.destination || "",
+        classType: state.classType || "",
+        quota: state.quota || "GN",
+      });
+      if (state.date) {
+        setDate(new Date(state.date));
+      }
+    }
+  }, [location.state]);
+
+  const checkOnboardingStatus = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("onboarding_completed")
+        .eq("user_id", userId)
+        .single();
+
+      if (data && !data.onboarding_completed) {
+        setShowOnboarding(true);
+      }
+    } catch (error) {
+      console.error("Error checking onboarding:", error);
+    }
+  };
+
+  const completeOnboarding = async () => {
+    setShowOnboarding(false);
+    if (user) {
+      try {
+        await supabase
+          .from("profiles")
+          .update({ onboarding_completed: true })
+          .eq("user_id", user.id);
+      } catch (error) {
+        console.error("Error updating onboarding status:", error);
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +125,8 @@ export default function Dashboard() {
           date: format(date, "yyyy-MM-dd"),
           classType: formData.classType,
           quota: formData.quota || "GN",
-        } as TrainSurfRequest,
+          mode: searchMode,
+        } as TrainSurfRequest & { mode: SearchMode },
       });
 
       if (response.error) {
@@ -113,9 +169,35 @@ export default function Dashboard() {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
+  const addToFavorites = async () => {
+    if (!user || !formData.trainNo || !formData.source || !formData.destination || !formData.classType) {
+      toast({ title: "Please fill all fields first", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from("favorites").insert([{
+        user_id: user.id,
+        train_no: formData.trainNo,
+        source: formData.source,
+        destination: formData.destination,
+        class_type: formData.classType,
+        quota: formData.quota || "GN",
+      }]);
+
+      if (error) {
+        if (error.code === "23505") {
+          toast({ title: "Already in favorites", variant: "destructive" });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({ title: "Added to favorites!" });
+      }
+    } catch (error) {
+      console.error("Error adding favorite:", error);
+      toast({ title: "Failed to add favorite", variant: "destructive" });
+    }
   };
 
   const resetForm = () => {
@@ -125,43 +207,81 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen pb-8">
-      {loading && <LoadingOverlay text="Running TrainSurf Algorithm..." />}
+    <div className="min-h-screen pb-24">
+      {loading && <LoadingOverlay text={searchMode === "urgent" ? "Running TrainSurf Algorithm..." : "Checking Direct Availability..."} />}
+      {showOnboarding && <OnboardingGuide onComplete={completeOnboarding} />}
       
       <Header
         title="Smart Seat Stitching"
-        subtitle="Find optimal seat combinations with minimal changes"
-      >
-        <div className="flex gap-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/sandbox")} className="text-primary-foreground hover:bg-primary-foreground/20">
-            <FlaskConical className="w-5 h-5" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => navigate("/history")} className="text-primary-foreground hover:bg-primary-foreground/20">
-            <History className="w-5 h-5" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-primary-foreground hover:bg-primary-foreground/20">
-            <LogOut className="w-5 h-5" />
-          </Button>
-        </div>
-      </Header>
+        subtitle="Find optimal seat combinations"
+      />
 
-      <main className="px-4 -mt-4 space-y-6">
-        {/* Removed Pro Tip banner */}
+      <main className="px-4 -mt-4 space-y-4">
+        {/* Search Mode Toggle */}
+        <div className="glass-card p-4 animate-scale-in">
+          <Label className="text-sm font-medium text-foreground mb-2 block">Search Mode</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setSearchMode("normal")}
+              className={cn(
+                "p-3 rounded-xl border-2 transition-all text-left",
+                searchMode === "normal" 
+                  ? "border-success bg-success/10" 
+                  : "border-border hover:border-success/50"
+              )}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Shield className="w-4 h-4 text-success" />
+                <span className="font-semibold text-sm text-foreground">Normal</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Check direct availability only</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSearchMode("urgent")}
+              className={cn(
+                "p-3 rounded-xl border-2 transition-all text-left",
+                searchMode === "urgent" 
+                  ? "border-primary bg-primary/10" 
+                  : "border-border hover:border-primary/50"
+              )}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Zap className="w-4 h-4 text-primary" />
+                <span className="font-semibold text-sm text-foreground">Urgent</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Full seat-stitching algorithm</p>
+            </button>
+          </div>
+        </div>
 
         {result ? (
-          <ResultsDisplay result={result} onRunAgain={resetForm} />
+          <div className="animate-slide-up">
+            <ResultsDisplay result={result} onRunAgain={resetForm} />
+          </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="glass-card p-5 space-y-4 animate-scale-in">
-              <div>
+            <div className="glass-card p-5 space-y-4 animate-slide-up">
+              <div className="flex items-center justify-between">
                 <Label htmlFor="trainNo">Train Number</Label>
-                <Input
-                  id="trainNo"
-                  placeholder="e.g., 12301"
-                  value={formData.trainNo}
-                  onChange={(e) => setFormData({ ...formData, trainNo: e.target.value })}
-                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={addToFavorites}
+                  className="text-warning hover:text-warning"
+                >
+                  <Star className="w-4 h-4 mr-1" />
+                  Save
+                </Button>
               </div>
+              <Input
+                id="trainNo"
+                placeholder="e.g., 12301"
+                value={formData.trainNo}
+                onChange={(e) => setFormData({ ...formData, trainNo: e.target.value })}
+              />
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -232,7 +352,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <Button type="submit" variant="gradient" size="xl" className="w-full animate-slide-up delay-200">
+            <Button type="submit" variant="gradient" size="xl" className="w-full animate-slide-up delay-100">
               <Rocket className="w-5 h-5" />
               Run TrainSurf
             </Button>

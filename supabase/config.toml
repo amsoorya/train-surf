@@ -2,3 +2,6 @@ project_id = "poaeniuzweejpwdxhzvf"
 
 [functions.trainsurf]
 verify_jwt = false
+
+[functions.live-status]
+verify_jwt = false

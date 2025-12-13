@@ -14,23 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
-      profiles: {
+      favorites: {
         Row: {
+          class_type: string
           created_at: string
-          email: string | null
+          destination: string
           id: string
+          nickname: string | null
+          quota: string
+          source: string
+          train_no: string
           user_id: string
         }
         Insert: {
+          class_type: string
           created_at?: string
-          email?: string | null
+          destination: string
           id?: string
+          nickname?: string | null
+          quota?: string
+          source: string
+          train_no: string
           user_id: string
         }
         Update: {
+          class_type?: string
           created_at?: string
-          email?: string | null
+          destination?: string
           id?: string
+          nickname?: string | null
+          quota?: string
+          source?: string
+          train_no?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          age: number | null
+          created_at: string
+          display_name: string | null
+          email: string | null
+          gender: string | null
+          id: string
+          onboarding_completed: boolean | null
+          phone: string | null
+          user_id: string
+        }
+        Insert: {
+          age?: number | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          gender?: string | null
+          id?: string
+          onboarding_completed?: boolean | null
+          phone?: string | null
+          user_id: string
+        }
+        Update: {
+          age?: number | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          gender?: string | null
+          id?: string
+          onboarding_completed?: boolean | null
+          phone?: string | null
           user_id?: string
         }
         Relationships: []

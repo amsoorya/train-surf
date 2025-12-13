@@ -52,7 +52,7 @@ export function StationAutocomplete({ value, onChange, placeholder, id }: Statio
     if (val.length >= 1) {
       const matches = stations.filter(
         s => s.code.includes(val) || s.name.toUpperCase().includes(val)
-      ).slice(0, 8);
+      ).slice(0, 6);
       setFiltered(matches);
       setIsOpen(matches.length > 0);
     } else {
@@ -79,7 +79,7 @@ export function StationAutocomplete({ value, onChange, placeholder, id }: Statio
       />
       
       {isOpen && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-elevated overflow-hidden animate-scale-in">
+        <div className="absolute z-[100] top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-elevated max-h-[200px] overflow-y-auto animate-scale-in">
           {filtered.map((station, idx) => (
             <button
               key={station.code}
@@ -91,8 +91,8 @@ export function StationAutocomplete({ value, onChange, placeholder, id }: Statio
               )}
             >
               <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="font-semibold text-foreground text-sm">
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-foreground text-sm truncate">
                   {station.code} <span className="font-normal text-muted-foreground">- {station.name}</span>
                 </p>
                 <p className="text-xs text-muted-foreground truncate">{station.state}</p>
