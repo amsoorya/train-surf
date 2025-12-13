@@ -16,6 +16,13 @@ export interface Segment {
   isAvailable: boolean;
 }
 
+export interface PathOption {
+  segments: Segment[];
+  seatChanges: number;
+  type: 'direct' | 'hops' | 'wl_partial';
+  description: string;
+}
+
 export interface TrainSurfResult {
   success: boolean;
   segments: Segment[];
@@ -24,6 +31,9 @@ export interface TrainSurfResult {
   totalStations: number;
   error?: string;
   debugInfo?: string[];
+  allPaths?: PathOption[];
+  hasWLPath?: boolean;
+  wlPath?: PathOption;
 }
 
 export interface HistoryEntry {
