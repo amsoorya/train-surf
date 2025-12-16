@@ -9,7 +9,7 @@ interface HeaderProps {
 
 export function Header({ title, subtitle, children }: HeaderProps) {
   return (
-    <header className="header-gradient safe-top">
+    <header className="header-gradient safe-top pt-10">
       <div className="relative z-10 px-4 py-6">
         <div className="flex items-center justify-between">
           <Logo />

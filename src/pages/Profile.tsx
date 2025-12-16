@@ -4,10 +4,11 @@ import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Phone, Calendar, Users, Save, Star, Home, History, MessageCircle, FlaskConical, Train, AlertCircle, HelpCircle, PhoneCall, Mail } from "lucide-react";
+import { ArrowLeft, User, Phone, Calendar, Users, Save, Star, Home, History, MessageCircle, FlaskConical, Train, AlertCircle, HelpCircle, PhoneCall, Mail, Lightbulb, Send } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface ProfileData {
@@ -18,7 +19,6 @@ interface ProfileData {
   email: string | null;
 }
 
-// Indian Railways Contact Information
 const RAILWAY_CONTACTS = [
   { name: "IRCTC Customer Care", phone: "14646", email: "care@irctc.co.in", type: "enquiry" },
   { name: "Railway Enquiry", phone: "139", email: null, type: "enquiry" },
@@ -26,15 +26,17 @@ const RAILWAY_CONTACTS = [
   { name: "RailMadad Helpline", phone: "139", email: "railmadad@rb.railnet.gov.in", type: "complaint" },
   { name: "Security Helpline (RPF)", phone: "182", email: null, type: "security" },
   { name: "Vigilance Complaints", phone: "1800-111-322", email: "cvo@rb.railnet.gov.in", type: "complaint" },
-  { name: "Unreserved Ticketing", phone: "14646", email: null, type: "enquiry" },
-  { name: "Catering Complaints", phone: "1800-111-321", email: "irctc.feedback@irctc.com", type: "complaint" },
 ];
+
+const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 
 export default function Profile() {
   const navigate = useNavigate();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [suggestion, setSuggestion] = useState("");
+  const [submittingSuggestion, setSubmittingSuggestion] = useState(false);
   const [profile, setProfile] = useState<ProfileData>({
     display_name: "",
     phone: "",
@@ -42,6 +44,28 @@ export default function Profile() {
     gender: "",
     email: ""
   });
+
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    const resetTimeout = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(async () => {
+        await supabase.auth.signOut({ scope: 'global' });
+        toast({ title: "Session expired. Please login again." });
+        navigate("/auth");
+      }, SESSION_TIMEOUT);
+    };
+
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach(event => window.addEventListener(event, resetTimeout));
+    resetTimeout();
+
+    return () => {
+      clearTimeout(timeoutId);
+      events.forEach(event => window.removeEventListener(event, resetTimeout));
+    };
+  }, [navigate]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
@@ -115,13 +139,31 @@ export default function Profile() {
     }
   };
 
+  const submitSuggestion = async () => {
+    if (!suggestion.trim()) {
+      toast({ title: "Please enter a suggestion", variant: "destructive" });
+      return;
+    }
+    setSubmittingSuggestion(true);
+    // Simulate submission
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    toast({ title: "Thank you for your suggestion! 💡" });
+    setSuggestion("");
+    setSubmittingSuggestion(false);
+  };
+
+  const logoutFromAllDevices = async () => {
+    await supabase.auth.signOut({ scope: 'global' });
+    toast({ title: "Logged out from all devices" });
+    navigate("/auth");
+  };
+
   const navItems = [
     { icon: Home, label: "Home", path: "/dashboard" },
     { icon: History, label: "History", path: "/history" },
     { icon: MessageCircle, label: "Contact Us", path: "/contact" },
     { icon: FlaskConical, label: "Tester", path: "/sandbox" },
     { icon: Star, label: "Favorites", path: "/favorites" },
-    { icon: Train, label: "Live Status", path: "/live-status" },
   ];
 
   return (
@@ -223,6 +265,30 @@ export default function Profile() {
           </div>
         </div>
 
+        {/* Suggestion Section */}
+        <div className="glass-card p-4 animate-slide-up delay-50">
+          <div className="flex items-center gap-2 mb-3">
+            <Lightbulb className="w-5 h-5 text-warning" />
+            <h3 className="font-semibold text-foreground">Have a Suggestion?</h3>
+          </div>
+          <Textarea
+            placeholder="Share your ideas to improve TrainSurf..."
+            value={suggestion}
+            onChange={(e) => setSuggestion(e.target.value)}
+            className="mb-3"
+            rows={3}
+          />
+          <Button
+            variant="gradient"
+            className="w-full"
+            onClick={submitSuggestion}
+            disabled={submittingSuggestion}
+          >
+            <Send className="w-4 h-4 mr-2" />
+            {submittingSuggestion ? "Submitting..." : "Submit Suggestion"}
+          </Button>
+        </div>
+
         {/* Railway Contacts */}
         <div className="glass-card p-4 animate-slide-up delay-100">
           <div className="flex items-center gap-2 mb-3">
@@ -282,17 +348,26 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Logout Button */}
-        <Button
-          variant="outline"
-          className="w-full text-destructive hover:bg-destructive/10"
-          onClick={async () => {
-            await supabase.auth.signOut();
-            navigate("/auth");
-          }}
-        >
-          Sign Out
-        </Button>
+        {/* Logout Buttons */}
+        <div className="space-y-2">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={logoutFromAllDevices}
+          >
+            Logout from All Devices
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full text-destructive hover:bg-destructive/10"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              navigate("/auth");
+            }}
+          >
+            Sign Out
+          </Button>
+        </div>
       </main>
     </div>
   );
