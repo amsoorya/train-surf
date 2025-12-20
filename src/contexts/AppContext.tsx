@@ -38,8 +38,9 @@ const LANGUAGES = {
   ko: "한국어",
 };
 
-// Base English translations
+// All translatable strings in the app
 const baseTranslations: Record<string, string> = {
+  // Navigation
   search: "Search",
   home: "Home",
   history: "History",
@@ -49,22 +50,31 @@ const baseTranslations: Record<string, string> = {
   tester: "Tester",
   settings: "Settings",
   logout: "Sign Out",
+  
+  // Theme & Language
   darkMode: "Dark Mode",
   language: "Language",
+  translating: "Translating...",
+  
+  // Features
   pnrStatus: "PNR Status",
-  liveTrainStatus: "Live Train Status",
-  trainsBetween: "Trains Between Stations",
+  liveTrainStatus: "Live Train",
+  trainsBetween: "Trains",
   bookNow: "Book Now",
   reportBug: "Report Bug",
   feedback: "Feedback",
   goBack: "Go Back",
   endChat: "End Chat",
+  
+  // Auth
   welcome: "Welcome",
   signIn: "Sign In",
   signUp: "Sign Up",
   email: "Email",
   password: "Password",
   phone: "Phone",
+  
+  // Actions
   submit: "Submit",
   cancel: "Cancel",
   save: "Save",
@@ -74,6 +84,89 @@ const baseTranslations: Record<string, string> = {
   success: "Success",
   noResults: "No results found",
   tryAgain: "Try Again",
+  
+  // Dashboard
+  smartSeatStitching: "Smart Seat Stitching",
+  findOptimalSeats: "Find optimal seat combinations",
+  searchMode: "Search Mode",
+  normal: "Normal",
+  urgent: "Urgent",
+  checkDirect: "Check direct availability only",
+  fullAlgorithm: "Full seat-stitching algorithm",
+  trainNumber: "Train Number",
+  fromStation: "From Station",
+  toStation: "To Station",
+  journeyDate: "Journey Date",
+  classLabel: "Class",
+  quota: "Quota",
+  runTrainSurf: "Run TrainSurf",
+  
+  // Profile
+  myProfile: "My Profile",
+  manageAccount: "Manage your account",
+  displayName: "Display Name",
+  age: "Age",
+  gender: "Gender",
+  saveChanges: "Save Changes",
+  haveSuggestion: "Have a Suggestion?",
+  shareSuggestion: "Share your ideas to improve TrainSurf...",
+  submitSuggestion: "Submit Suggestion",
+  contactRailways: "Contact Railways",
+  quickNavigation: "Quick Navigation",
+  logoutAllDevices: "Logout from All Devices",
+  sessionExpired: "Session expired. Please login again.",
+  
+  // Contact
+  developerContact: "Developer Contact",
+  askAnything: "Ask me anything...",
+  online: "Online",
+  rateReview: "Rate & Review",
+  shareYourFeedback: "Share your feedback...",
+  submitFeedback: "Submit Feedback",
+  describeBug: "Describe the bug you encountered...",
+  submitReport: "Submit Report",
+  chatEnded: "Chat ended",
+  thankYouFeedback: "Thank you for your feedback!",
+  bugReportSubmitted: "Bug report submitted. Thanks for helping improve TrainSurf!",
+  pleaseSelectRating: "Please select a rating",
+  pleaseDescribeBug: "Please describe the bug",
+  
+  // PNR Status
+  enterPnr: "Enter your 10-digit PNR number",
+  checkStatus: "Check Status",
+  invalidPnr: "Please enter a valid 10-digit PNR",
+  passengerDetails: "Passenger Details",
+  passenger: "Passenger",
+  bookingStatus: "Booking Status",
+  currentStatus: "Current Status",
+  coach: "Coach",
+  berth: "Berth",
+  
+  // Trains Between
+  findTrains: "Find trains between any two stations",
+  searchTrains: "Search Trains",
+  selectSource: "Select source station",
+  selectDestination: "Select destination station",
+  departure: "Departure",
+  arrival: "Arrival",
+  duration: "Duration",
+  runsOn: "Runs On",
+  
+  // Live Train
+  trackTrain: "Track train location and status",
+  getStatus: "Get Status",
+  currentLocation: "Current Location",
+  lastUpdate: "Last Update",
+  delay: "Delay",
+  onTime: "On Time",
+  late: "Late",
+  
+  // Tester Mode
+  testerMode: "Tester Mode",
+  testerModeOn: "Tester Mode ON",
+  testerModeOff: "Tester Mode OFF",
+  usingTestData: "Using test data",
+  usingLiveData: "Using live data",
 };
 
 interface AppContextType {
@@ -84,6 +177,8 @@ interface AppContextType {
   languages: typeof LANGUAGES;
   t: (key: string) => string;
   isTranslating: boolean;
+  isTesterMode: boolean;
+  toggleTesterMode: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -101,6 +196,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   const [language, setLanguageState] = useState(() => {
     return localStorage.getItem("language") || "en";
+  });
+
+  const [isTesterMode, setIsTesterMode] = useState(() => {
+    return localStorage.getItem("testerMode") === "true";
   });
 
   const [translations, setTranslations] = useState<Record<string, string>>(baseTranslations);
@@ -171,12 +270,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("language", lang);
   };
 
+  const toggleTesterMode = () => {
+    setIsTesterMode(prev => {
+      const newVal = !prev;
+      localStorage.setItem("testerMode", String(newVal));
+      return newVal;
+    });
+  };
+
   const t = useCallback((key: string) => {
     return translations[key] || baseTranslations[key] || key;
   }, [translations]);
 
   return (
-    <AppContext.Provider value={{ theme, toggleTheme, language, setLanguage, languages: LANGUAGES, t, isTranslating }}>
+    <AppContext.Provider value={{ 
+      theme, toggleTheme, 
+      language, setLanguage, languages: LANGUAGES, 
+      t, isTranslating,
+      isTesterMode, toggleTesterMode
+    }}>
       {children}
     </AppContext.Provider>
   );

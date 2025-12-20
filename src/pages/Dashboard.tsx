@@ -12,18 +12,31 @@ import { ResultsDisplay } from "@/components/ResultsDisplay";
 import { StationAutocomplete } from "@/components/StationAutocomplete";
 import { OnboardingGuide } from "@/components/OnboardingGuide";
 import { TrainSurfRequest, TrainSurfResult, CLASS_OPTIONS, QUOTA_OPTIONS } from "@/types/trainsurf";
-import { CalendarIcon, Rocket, Star, MapPin, Zap, Shield } from "lucide-react";
+import { CalendarIcon, Rocket, Star, Zap, Shield, FlaskConical } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useApp } from "@/contexts/AppContext";
 import type { User } from "@supabase/supabase-js";
 
 type SearchMode = "normal" | "urgent";
 
+// Placeholder test data for tester mode
+const TEST_RESULT: TrainSurfResult = {
+  success: true,
+  seatChanges: 1,
+  segments: [
+    { from: "NDLS", to: "CNB", status: "AVL 45", isAvailable: true },
+    { from: "CNB", to: "HWH", status: "AVL 23", isAvailable: true },
+  ],
+  message: "Test Mode: Found path with 1 seat change",
+};
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t, isTesterMode } = useApp();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TrainSurfResult | null>(null);
@@ -116,6 +129,15 @@ export default function Dashboard() {
     setLoading(true);
     setResult(null);
 
+    // If tester mode is on, use test data
+    if (isTesterMode) {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      setResult(TEST_RESULT);
+      toast({ title: `${t("testerMode")}: Found path with ${TEST_RESULT.seatChanges} seat change(s)!` });
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await supabase.functions.invoke("trainsurf", {
         body: {
@@ -155,12 +177,12 @@ export default function Dashboard() {
       if (resultData.success) {
         toast({ title: `Found path with ${resultData.seatChanges} seat change(s)!` });
       } else {
-        toast({ title: "No available path found", variant: "destructive" });
+        toast({ title: t("noResults"), variant: "destructive" });
       }
     } catch (error) {
       console.error("TrainSurf error:", error);
       toast({ 
-        title: "Error running algorithm", 
+        title: t("error"), 
         description: error instanceof Error ? error.message : "Please try again",
         variant: "destructive" 
       });
@@ -212,14 +234,22 @@ export default function Dashboard() {
       {showOnboarding && <OnboardingGuide onComplete={completeOnboarding} />}
       
       <Header
-        title="Smart Seat Stitching"
-        subtitle="Find optimal seat combinations"
+        title={t("smartSeatStitching")}
+        subtitle={t("findOptimalSeats")}
       />
+
+      {/* Tester Mode Banner */}
+      {isTesterMode && (
+        <div className="mx-4 -mt-2 mb-2 p-2 bg-warning/20 border border-warning rounded-lg flex items-center gap-2">
+          <FlaskConical className="w-4 h-4 text-warning" />
+          <span className="text-sm text-warning font-medium">{t("testerModeOn")} - {t("usingTestData")}</span>
+        </div>
+      )}
 
       <main className="px-4 -mt-4 space-y-4">
         {/* Search Mode Toggle */}
         <div className="glass-card p-4 animate-scale-in">
-          <Label className="text-sm font-medium text-foreground mb-2 block">Search Mode</Label>
+          <Label className="text-sm font-medium text-foreground mb-2 block">{t("searchMode")}</Label>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -233,9 +263,9 @@ export default function Dashboard() {
             >
               <div className="flex items-center gap-2 mb-1">
                 <Shield className="w-4 h-4 text-success" />
-                <span className="font-semibold text-sm text-foreground">Normal</span>
+                <span className="font-semibold text-sm text-foreground">{t("normal")}</span>
               </div>
-              <p className="text-xs text-muted-foreground">Check direct availability only</p>
+              <p className="text-xs text-muted-foreground">{t("checkDirect")}</p>
             </button>
             <button
               type="button"
@@ -249,9 +279,9 @@ export default function Dashboard() {
             >
               <div className="flex items-center gap-2 mb-1">
                 <Zap className="w-4 h-4 text-primary" />
-                <span className="font-semibold text-sm text-foreground">Urgent</span>
+                <span className="font-semibold text-sm text-foreground">{t("urgent")}</span>
               </div>
-              <p className="text-xs text-muted-foreground">Full seat-stitching algorithm</p>
+              <p className="text-xs text-muted-foreground">{t("fullAlgorithm")}</p>
             </button>
           </div>
         </div>
@@ -264,7 +294,7 @@ export default function Dashboard() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="glass-card p-5 space-y-4 animate-slide-up">
               <div className="flex items-center justify-between">
-                <Label htmlFor="trainNo">Train Number</Label>
+                <Label htmlFor="trainNo">{t("trainNumber")}</Label>
                 <Button
                   type="button"
                   variant="ghost"
@@ -273,7 +303,7 @@ export default function Dashboard() {
                   className="text-warning hover:text-warning"
                 >
                   <Star className="w-4 h-4 mr-1" />
-                  Save
+                  {t("save")}
                 </Button>
               </div>
               <Input
@@ -285,7 +315,7 @@ export default function Dashboard() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="source">From Station</Label>
+                  <Label htmlFor="source">{t("fromStation")}</Label>
                   <StationAutocomplete
                     id="source"
                     placeholder="e.g., NDLS"
@@ -294,7 +324,7 @@ export default function Dashboard() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="destination">To Station</Label>
+                  <Label htmlFor="destination">{t("toStation")}</Label>
                   <StationAutocomplete
                     id="destination"
                     placeholder="e.g., HWH"
@@ -305,7 +335,7 @@ export default function Dashboard() {
               </div>
 
               <div>
-                <Label>Journey Date</Label>
+                <Label>{t("journeyDate")}</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full justify-start text-left font-normal h-12")}>
@@ -328,7 +358,7 @@ export default function Dashboard() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Class</Label>
+                  <Label>{t("classLabel")}</Label>
                   <Select value={formData.classType} onValueChange={(v) => setFormData({ ...formData, classType: v })}>
                     <SelectTrigger className="h-12"><SelectValue placeholder="Select" /></SelectTrigger>
                     <SelectContent>
@@ -339,7 +369,7 @@ export default function Dashboard() {
                   </Select>
                 </div>
                 <div>
-                  <Label>Quota</Label>
+                  <Label>{t("quota")}</Label>
                   <Select value={formData.quota} onValueChange={(v) => setFormData({ ...formData, quota: v })}>
                     <SelectTrigger className="h-12"><SelectValue placeholder="Select" /></SelectTrigger>
                     <SelectContent>
@@ -354,7 +384,7 @@ export default function Dashboard() {
 
             <Button type="submit" variant="gradient" size="xl" className="w-full animate-slide-up delay-100">
               <Rocket className="w-5 h-5" />
-              Run TrainSurf
+              {t("runTrainSurf")}
             </Button>
           </form>
         )}
