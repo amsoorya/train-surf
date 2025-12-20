@@ -1,13 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Search, Ticket, User, MapPin, Calendar, Train, Clock, ExternalLink } from "lucide-react";
+import { ArrowLeft, Search, Ticket, User, MapPin, Calendar, Train, Clock, ExternalLink, FlaskConical } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { useApp } from "@/contexts/AppContext";
 
 interface PNRData {
   trainNo?: string;
@@ -27,20 +28,47 @@ interface PNRData {
   error?: string;
 }
 
+// Test data for tester mode
+const TEST_PNR_DATA: PNRData = {
+  trainNo: "12301",
+  trainName: "Rajdhani Express",
+  doj: "25-12-2025",
+  from: "NDLS",
+  to: "HWH",
+  boardingPoint: "NDLS",
+  class: "3A",
+  quota: "GN",
+  chartStatus: "Chart Prepared",
+  passengers: [
+    { number: 1, bookingStatus: "CNF/B2/45", currentStatus: "CNF/B2/45" },
+    { number: 2, bookingStatus: "CNF/B2/46", currentStatus: "CNF/B2/46" },
+  ],
+};
+
 export default function PNRStatus() {
   const navigate = useNavigate();
+  const { t, isTesterMode } = useApp();
   const [pnr, setPnr] = useState("");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<PNRData | null>(null);
 
   const handleSearch = async () => {
     if (!pnr || pnr.length !== 10) {
-      toast({ title: "Enter valid 10-digit PNR", variant: "destructive" });
+      toast({ title: t("invalidPnr"), variant: "destructive" });
       return;
     }
 
     setLoading(true);
     setData(null);
+
+    // Use test data if tester mode is on
+    if (isTesterMode) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setData(TEST_PNR_DATA);
+      toast({ title: `${t("testerMode")}: ${t("success")}` });
+      setLoading(false);
+      return;
+    }
 
     try {
       const { data: result, error } = await supabase.functions.invoke("pnr-status", {
@@ -57,7 +85,7 @@ export default function PNRStatus() {
       setData(result);
     } catch (err) {
       console.error("PNR error:", err);
-      toast({ title: "Failed to fetch PNR status", variant: "destructive" });
+      toast({ title: t("error"), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -72,7 +100,7 @@ export default function PNRStatus() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header title="PNR Status" subtitle="Check your booking status">
+      <Header title={t("pnrStatus")} subtitle={t("checkBookingStatus")}>
         <Button
           variant="ghost"
           size="icon"
@@ -84,17 +112,25 @@ export default function PNRStatus() {
       </Header>
 
       <main className="flex-1 px-4 -mt-4 pb-20">
+        {/* Tester Mode Banner */}
+        {isTesterMode && (
+          <div className="p-2 mb-4 bg-warning/20 border border-warning rounded-lg flex items-center gap-2">
+            <FlaskConical className="w-4 h-4 text-warning" />
+            <span className="text-sm text-warning font-medium">{t("testerModeOn")} - {t("usingTestData")}</span>
+          </div>
+        )}
+
         {/* Search Card */}
         <div className="glass-card p-4 mb-4 animate-slide-up">
           <div className="space-y-4">
             <div>
-              <Label htmlFor="pnr">PNR Number</Label>
+              <Label htmlFor="pnr">{t("pnrNumber")}</Label>
               <div className="relative mt-1">
                 <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   id="pnr"
                   type="text"
-                  placeholder="Enter 10-digit PNR"
+                  placeholder={t("enterPnr")}
                   maxLength={10}
                   value={pnr}
                   onChange={(e) => setPnr(e.target.value.replace(/\D/g, ""))}
@@ -108,7 +144,7 @@ export default function PNRStatus() {
               onClick={handleSearch}
               disabled={loading || pnr.length !== 10}
             >
-              {loading ? <LoadingSpinner size="sm" /> : <><Search className="w-4 h-4 mr-2" /> Check Status</>}
+              {loading ? <LoadingSpinner size="sm" /> : <><Search className="w-4 h-4 mr-2" /> {t("checkStatus")}</>}
             </Button>
           </div>
         </div>
@@ -132,28 +168,28 @@ export default function PNRStatus() {
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-success mt-0.5" />
                 <div>
-                  <p className="text-xs text-muted-foreground">From</p>
+                  <p className="text-xs text-muted-foreground">{t("fromStation")}</p>
                   <p className="font-medium text-foreground">{data.from}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-destructive mt-0.5" />
                 <div>
-                  <p className="text-xs text-muted-foreground">To</p>
+                  <p className="text-xs text-muted-foreground">{t("toStation")}</p>
                   <p className="font-medium text-foreground">{data.to}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <Calendar className="w-4 h-4 text-primary mt-0.5" />
                 <div>
-                  <p className="text-xs text-muted-foreground">Date</p>
+                  <p className="text-xs text-muted-foreground">{t("journeyDate")}</p>
                   <p className="font-medium text-foreground">{data.doj}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <Clock className="w-4 h-4 text-warning mt-0.5" />
                 <div>
-                  <p className="text-xs text-muted-foreground">Chart</p>
+                  <p className="text-xs text-muted-foreground">{t("chartStatus")}</p>
                   <p className="font-medium text-foreground">{data.chartStatus || "Not Prepared"}</p>
                 </div>
               </div>
@@ -161,16 +197,16 @@ export default function PNRStatus() {
 
             {/* Passengers */}
             <div className="space-y-2">
-              <h4 className="font-semibold text-foreground mb-2">Passengers</h4>
+              <h4 className="font-semibold text-foreground mb-2">{t("passengerDetails")}</h4>
               {data.passengers?.map((p, i) => (
                 <div key={i} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-medium">Passenger {p.number}</span>
+                    <span className="font-medium">{t("passenger")} {p.number}</span>
                   </div>
                   <div className="text-right">
                     <p className={`font-semibold ${getStatusColor(p.currentStatus)}`}>{p.currentStatus}</p>
-                    <p className="text-xs text-muted-foreground">Booked: {p.bookingStatus}</p>
+                    <p className="text-xs text-muted-foreground">{t("bookingStatus")}: {p.bookingStatus}</p>
                   </div>
                 </div>
               ))}
@@ -182,7 +218,7 @@ export default function PNRStatus() {
               className="w-full mt-4"
               onClick={() => window.open("https://www.irctc.co.in", "_blank")}
             >
-              <ExternalLink className="w-4 h-4 mr-2" /> Open IRCTC
+              <ExternalLink className="w-4 h-4 mr-2" /> {t("bookNow")}
             </Button>
           </div>
         )}
