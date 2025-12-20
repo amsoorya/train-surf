@@ -1,4 +1,4 @@
-import { Moon, Sun, Globe } from "lucide-react";
+import { Moon, Sun, Globe, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/contexts/AppContext";
 import {
@@ -10,10 +10,18 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function TopBar() {
-  const { theme, toggleTheme, language, setLanguage, languages } = useApp();
+  const { theme, toggleTheme, language, setLanguage, languages, isTranslating } = useApp();
 
   return (
     <div className="fixed top-0 right-0 z-50 flex items-center gap-1 p-2 safe-top">
+      {/* Translation Loading Indicator */}
+      {isTranslating && (
+        <div className="h-8 px-2 flex items-center gap-1 bg-background/80 backdrop-blur-sm border border-border/50 rounded-md">
+          <Loader2 className="h-3 w-3 animate-spin text-primary" />
+          <span className="text-xs text-muted-foreground">Translating...</span>
+        </div>
+      )}
+
       {/* Language Selector */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

@@ -13,6 +13,9 @@ import Sandbox from "./pages/Sandbox";
 import Profile from "./pages/Profile";
 import Favorites from "./pages/Favorites";
 import Contact from "./pages/Contact";
+import PNRStatus from "./pages/PNRStatus";
+import TrainsBetween from "./pages/TrainsBetween";
+import LiveTrainStatus from "./pages/LiveTrainStatus";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +38,9 @@ const App = () => (
               <Route path="/profile" element={<Profile />} />
               <Route path="/favorites" element={<Favorites />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/pnr-status" element={<PNRStatus />} />
+              <Route path="/trains-between" element={<TrainsBetween />} />
+              <Route path="/live-train" element={<LiveTrainStatus />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>

@@ -3,5 +3,14 @@ project_id = "poaeniuzweejpwdxhzvf"
 [functions.trainsurf]
 verify_jwt = true
 
-[functions.live-status]
-verify_jwt = true
+[functions.translate]
+verify_jwt = false
+
+[functions.pnr-status]
+verify_jwt = false
+
+[functions.trains-between]
+verify_jwt = false
+
+[functions.live-train]
+verify_jwt = false

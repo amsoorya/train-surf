@@ -1,23 +1,25 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, History, FlaskConical, User, Star } from "lucide-react";
+import { Home, History, FlaskConical, User, Star, Ticket, Navigation, Train } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const NAV_ITEMS = [
-  { icon: Home, label: "Home", path: "/dashboard" },
-  { icon: History, label: "History", path: "/history" },
-  { icon: FlaskConical, label: "Tester", path: "/sandbox" },
-  { icon: Star, label: "Favorites", path: "/favorites" },
-  { icon: User, label: "Profile", path: "/profile" },
-];
+import { useApp } from "@/contexts/AppContext";
 
 export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useApp();
 
   // Don't show on auth page
   if (location.pathname === "/auth" || location.pathname === "/") {
     return null;
   }
+
+  const NAV_ITEMS = [
+    { icon: Home, label: t("home"), path: "/dashboard" },
+    { icon: Ticket, label: t("pnrStatus"), path: "/pnr-status" },
+    { icon: Navigation, label: "Live", path: "/live-train" },
+    { icon: Train, label: "Trains", path: "/trains-between" },
+    { icon: User, label: t("profile"), path: "/profile" },
+  ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border safe-bottom z-40">
