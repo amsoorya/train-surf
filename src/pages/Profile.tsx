@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useApp } from "@/contexts/AppContext";
 import { ArrowLeft, User, Phone, Calendar, Users, Save, Star, Home, History, MessageCircle, FlaskConical, Train, AlertCircle, HelpCircle, PhoneCall, Mail, Lightbulb, Send } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -32,6 +33,7 @@ const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 
 export default function Profile() {
   const navigate = useNavigate();
+  const { t } = useApp();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,7 +54,7 @@ export default function Profile() {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(async () => {
         await supabase.auth.signOut({ scope: 'global' });
-        toast({ title: "Session expired. Please login again." });
+        toast({ title: t("sessionExpired") });
         navigate("/auth");
       }, SESSION_TIMEOUT);
     };
@@ -65,7 +67,7 @@ export default function Profile() {
       clearTimeout(timeoutId);
       events.forEach(event => window.removeEventListener(event, resetTimeout));
     };
-  }, [navigate]);
+  }, [navigate, t]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
@@ -130,10 +132,10 @@ export default function Profile() {
         .eq("user_id", user.id);
 
       if (error) throw error;
-      toast({ title: "Profile updated successfully!" });
+      toast({ title: t("success") + "!" });
     } catch (error) {
       console.error("Error saving profile:", error);
-      toast({ title: "Failed to save profile", variant: "destructive" });
+      toast({ title: t("error"), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -145,7 +147,6 @@ export default function Profile() {
       return;
     }
     setSubmittingSuggestion(true);
-    // Simulate submission
     await new Promise(resolve => setTimeout(resolve, 1000));
     toast({ title: "Thank you for your suggestion! 💡" });
     setSuggestion("");
@@ -154,21 +155,21 @@ export default function Profile() {
 
   const logoutFromAllDevices = async () => {
     await supabase.auth.signOut({ scope: 'global' });
-    toast({ title: "Logged out from all devices" });
+    toast({ title: t("logoutAllDevices") });
     navigate("/auth");
   };
 
   const navItems = [
-    { icon: Home, label: "Home", path: "/dashboard" },
-    { icon: History, label: "History", path: "/history" },
-    { icon: MessageCircle, label: "Contact Us", path: "/contact" },
-    { icon: FlaskConical, label: "Tester", path: "/sandbox" },
-    { icon: Star, label: "Favorites", path: "/favorites" },
+    { icon: Home, label: t("home"), path: "/dashboard" },
+    { icon: History, label: t("history"), path: "/history" },
+    { icon: MessageCircle, label: t("contact"), path: "/contact" },
+    { icon: FlaskConical, label: t("tester"), path: "/sandbox" },
+    { icon: Star, label: t("favorites"), path: "/favorites" },
   ];
 
   return (
     <div className="min-h-screen pb-24">
-      <Header title="My Profile" subtitle="Manage your account">
+      <Header title={t("myProfile")} subtitle={t("manageAccount")}>
         <Button
           variant="ghost"
           size="icon"
@@ -194,7 +195,7 @@ export default function Profile() {
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="displayName">Display Name</Label>
+              <Label htmlFor="displayName">{t("displayName")}</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -208,7 +209,7 @@ export default function Profile() {
             </div>
 
             <div>
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="phone">{t("phone")}</Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -223,7 +224,7 @@ export default function Profile() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="age">Age</Label>
+                <Label htmlFor="age">{t("age")}</Label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -237,7 +238,7 @@ export default function Profile() {
                 </div>
               </div>
               <div>
-                <Label>Gender</Label>
+                <Label>{t("gender")}</Label>
                 <Select value={profile.gender || ""} onValueChange={(v) => setProfile({ ...profile, gender: v })}>
                   <SelectTrigger className="h-10">
                     <Users className="w-4 h-4 mr-2 text-muted-foreground" />
@@ -260,7 +261,7 @@ export default function Profile() {
               disabled={saving}
             >
               <Save className="w-4 h-4 mr-2" />
-              {saving ? "Saving..." : "Save Changes"}
+              {saving ? t("loading") : t("saveChanges")}
             </Button>
           </div>
         </div>
@@ -269,10 +270,10 @@ export default function Profile() {
         <div className="glass-card p-4 animate-slide-up delay-50">
           <div className="flex items-center gap-2 mb-3">
             <Lightbulb className="w-5 h-5 text-warning" />
-            <h3 className="font-semibold text-foreground">Have a Suggestion?</h3>
+            <h3 className="font-semibold text-foreground">{t("haveSuggestion")}</h3>
           </div>
           <Textarea
-            placeholder="Share your ideas to improve TrainSurf..."
+            placeholder={t("shareSuggestion")}
             value={suggestion}
             onChange={(e) => setSuggestion(e.target.value)}
             className="mb-3"
@@ -285,7 +286,7 @@ export default function Profile() {
             disabled={submittingSuggestion}
           >
             <Send className="w-4 h-4 mr-2" />
-            {submittingSuggestion ? "Submitting..." : "Submit Suggestion"}
+            {submittingSuggestion ? t("loading") : t("submitSuggestion")}
           </Button>
         </div>
 
@@ -293,7 +294,7 @@ export default function Profile() {
         <div className="glass-card p-4 animate-slide-up delay-100">
           <div className="flex items-center gap-2 mb-3">
             <Train className="w-5 h-5 text-primary" />
-            <h3 className="font-semibold text-foreground">Contact Railways</h3>
+            <h3 className="font-semibold text-foreground">{t("contactRailways")}</h3>
           </div>
           
           <div className="space-y-2">
@@ -331,7 +332,7 @@ export default function Profile() {
 
         {/* Navigation Section */}
         <div className="glass-card p-4 animate-slide-up delay-200">
-          <h3 className="font-semibold text-foreground mb-3">Quick Navigation</h3>
+          <h3 className="font-semibold text-foreground mb-3">{t("quickNavigation")}</h3>
           <div className="grid grid-cols-3 gap-2">
             {navItems.map((item) => (
               <button
@@ -355,7 +356,7 @@ export default function Profile() {
             className="w-full"
             onClick={logoutFromAllDevices}
           >
-            Logout from All Devices
+            {t("logoutAllDevices")}
           </Button>
           <Button
             variant="outline"
@@ -365,7 +366,7 @@ export default function Profile() {
               navigate("/auth");
             }}
           >
-            Sign Out
+            {t("logout")}
           </Button>
         </div>
       </main>
