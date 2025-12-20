@@ -132,6 +132,8 @@ const baseTranslations: Record<string, string> = {
   pleaseDescribeBug: "Please describe the bug",
   
   // PNR Status
+  checkBookingStatus: "Check your booking status",
+  pnrNumber: "PNR Number",
   enterPnr: "Enter your 10-digit PNR number",
   checkStatus: "Check Status",
   invalidPnr: "Please enter a valid 10-digit PNR",
@@ -141,9 +143,10 @@ const baseTranslations: Record<string, string> = {
   currentStatus: "Current Status",
   coach: "Coach",
   berth: "Berth",
+  chartStatus: "Chart Status",
   
   // Trains Between
-  findTrains: "Find trains between any two stations",
+  findTrains: "Find all available trains",
   searchTrains: "Search Trains",
   selectSource: "Select source station",
   selectDestination: "Select destination station",
@@ -153,13 +156,14 @@ const baseTranslations: Record<string, string> = {
   runsOn: "Runs On",
   
   // Live Train
-  trackTrain: "Track train location and status",
+  trackTrain: "Track train in real-time",
   getStatus: "Get Status",
   currentLocation: "Current Location",
   lastUpdate: "Last Update",
   delay: "Delay",
   onTime: "On Time",
   late: "Late",
+  route: "Route",
   
   // Tester Mode
   testerMode: "Tester Mode",
@@ -167,6 +171,14 @@ const baseTranslations: Record<string, string> = {
   testerModeOff: "Tester Mode OFF",
   usingTestData: "Using test data",
   usingLiveData: "Using live data",
+  
+  // Railway Contacts
+  irctcCustomerCare: "IRCTC Customer Care",
+  railwayEnquiry: "Railway Enquiry",
+  complaints: "Complaints (CPGRAMS)",
+  railmadadHelpline: "RailMadad Helpline",
+  securityHelpline: "Security Helpline (RPF)",
+  vigilanceComplaints: "Vigilance Complaints",
 };
 
 interface AppContextType {

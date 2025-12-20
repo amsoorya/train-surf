@@ -21,12 +21,12 @@ interface ProfileData {
 }
 
 const RAILWAY_CONTACTS = [
-  { name: "IRCTC Customer Care", phone: "14646", email: "care@irctc.co.in", type: "enquiry" },
-  { name: "Railway Enquiry", phone: "139", email: null, type: "enquiry" },
-  { name: "Complaints (CPGRAMS)", phone: "1800-111-321", email: "railmadad@rb.railnet.gov.in", type: "complaint" },
-  { name: "RailMadad Helpline", phone: "139", email: "railmadad@rb.railnet.gov.in", type: "complaint" },
-  { name: "Security Helpline (RPF)", phone: "182", email: null, type: "security" },
-  { name: "Vigilance Complaints", phone: "1800-111-322", email: "cvo@rb.railnet.gov.in", type: "complaint" },
+  { nameKey: "irctcCustomerCare", phone: "14646", email: "care@irctc.co.in", type: "enquiry" },
+  { nameKey: "railwayEnquiry", phone: "139", email: null, type: "enquiry" },
+  { nameKey: "complaints", phone: "1800-111-321", email: "railmadad@rb.railnet.gov.in", type: "complaint" },
+  { nameKey: "railmadadHelpline", phone: "139", email: "railmadad@rb.railnet.gov.in", type: "complaint" },
+  { nameKey: "securityHelpline", phone: "182", email: null, type: "security" },
+  { nameKey: "vigilanceComplaints", phone: "1800-111-322", email: "cvo@rb.railnet.gov.in", type: "complaint" },
 ];
 
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
@@ -305,7 +305,7 @@ export default function Profile() {
                   {contact.type === "complaint" && <AlertCircle className="w-4 h-4 text-warning flex-shrink-0" />}
                   {contact.type === "security" && <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />}
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{contact.name}</p>
+                    <p className="text-sm font-medium text-foreground truncate">{t(contact.nameKey)}</p>
                     <p className="text-xs text-muted-foreground">{contact.phone}</p>
                   </div>
                 </div>
