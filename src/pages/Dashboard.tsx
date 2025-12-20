@@ -30,7 +30,8 @@ const TEST_RESULT: TrainSurfResult = {
     { from: "NDLS", to: "CNB", status: "AVL 45", isAvailable: true },
     { from: "CNB", to: "HWH", status: "AVL 23", isAvailable: true },
   ],
-  message: "Test Mode: Found path with 1 seat change",
+  apiCalls: 0,
+  totalStations: 3,
 };
 
 export default function Dashboard() {
