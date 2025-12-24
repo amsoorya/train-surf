@@ -17,6 +17,19 @@ const FALLBACK_API = {
   endpoint: (trainNo: string, startDay: number) => `/api/v1/liveTrainStatus?trainNo=${trainNo}&startDay=${startDay}`
 };
 
+function isValidResponse(data: any): boolean {
+  // Check various error indicators
+  if (!data) return false;
+  if (data.error) return false;
+  if (data.status === false) return false;
+  if (data.message && data.message.toLowerCase().includes('error')) return false;
+  if (data.message && data.message.toLowerCase().includes('invalid')) return false;
+  if (data.message && data.message.toLowerCase().includes('not found')) return false;
+  // If we have actual data, consider it valid
+  if (data.data || data.train_number || data.current_station || data.body) return true;
+  return true;
+}
+
 async function fetchWithFallback(trainNo: string, startDay: number, apiKey: string) {
   // Try primary API first
   console.log(`Trying primary API: ${PRIMARY_API.host}`);
@@ -31,12 +44,13 @@ async function fetchWithFallback(trainNo: string, startDay: number, apiKey: stri
 
     if (response.ok) {
       const data = await response.json();
-      if (data && !data.error) {
-        console.log("Primary API succeeded");
+      console.log("Primary API response:", JSON.stringify(data).substring(0, 300));
+      if (isValidResponse(data)) {
+        console.log("Primary API succeeded with valid data");
         return { data, source: 'primary' };
       }
     }
-    console.log(`Primary API failed with status: ${response.status}`);
+    console.log(`Primary API failed or returned invalid data`);
   } catch (error) {
     console.log(`Primary API error: ${error}`);
   }
@@ -54,15 +68,18 @@ async function fetchWithFallback(trainNo: string, startDay: number, apiKey: stri
 
     if (response.ok) {
       const data = await response.json();
-      console.log("Fallback API succeeded");
-      return { data, source: 'fallback' };
+      console.log("Fallback API response:", JSON.stringify(data).substring(0, 300));
+      if (isValidResponse(data)) {
+        console.log("Fallback API succeeded with valid data");
+        return { data, source: 'fallback' };
+      }
     }
-    console.log(`Fallback API failed with status: ${response.status}`);
+    console.log(`Fallback API failed or returned invalid data, status: ${response.status}`);
   } catch (error) {
     console.log(`Fallback API error: ${error}`);
   }
 
-  throw new Error("All API endpoints failed");
+  throw new Error("All API endpoints failed or returned invalid data");
 }
 
 serve(async (req) => {
@@ -92,7 +109,7 @@ serve(async (req) => {
     console.log(`Fetching live status for train: ${trainNo}, startDay: ${startDay}`);
 
     const { data, source } = await fetchWithFallback(trainNo, startDay, apiKey);
-    console.log(`Live train response from ${source}:`, JSON.stringify(data).substring(0, 200));
+    console.log(`Live train response from ${source}`);
 
     return new Response(
       JSON.stringify(data),
