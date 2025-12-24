@@ -50,16 +50,39 @@ export function InstallPrompt() {
     };
   }, []);
 
+  const requestNotificationPermission = async () => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      try {
+        const permission = await Notification.requestPermission();
+        console.log('Notification permission:', permission);
+        if (permission === 'granted') {
+          // Show welcome notification
+          new Notification('TrainSurf Installed! 🚂', {
+            body: 'You\'ll receive updates about new features and train alerts.',
+            icon: '/train-icon-192.png',
+            badge: '/train-icon-192.png'
+          });
+        }
+      } catch (err) {
+        console.log('Notification permission error:', err);
+      }
+    }
+  };
+
   const handleInstall = async () => {
     if (deferredPrompt) {
       await deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === "accepted") {
         setShowPrompt(false);
+        // Request notification permission after install
+        await requestNotificationPermission();
       }
       setDeferredPrompt(null);
     } else if (isIOS) {
       setShowIOSInstructions(true);
+      // Request notification permission for iOS too
+      await requestNotificationPermission();
     }
   };
 
