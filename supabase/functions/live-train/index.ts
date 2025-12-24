@@ -45,6 +45,17 @@ serve(async (req) => {
         const data = await response.json();
         console.log(`Live train response (startDay=${startDay}):`, JSON.stringify(data).substring(0, 300));
 
+        // Check for quota exceeded or API error messages
+        if (data?.message?.toLowerCase().includes('exceeded') || 
+            data?.message?.toLowerCase().includes('quota') ||
+            data?.message?.toLowerCase().includes('upgrade')) {
+          console.log("API quota exceeded");
+          return new Response(
+            JSON.stringify({ error: "API quota exceeded. Please try again later or enable Tester Mode." }),
+            { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
         // Check if we got valid data
         if (data && data.status === true && data.data) {
           return new Response(
