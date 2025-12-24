@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { trainNo, startDay = 1 } = await req.json();
+    const { trainNo } = await req.json();
     
     if (!trainNo) {
       return new Response(
@@ -29,22 +29,53 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Fetching live status for train: ${trainNo}, startDay: ${startDay}`);
+    // Try with startDay=0 (started today) first, then startDay=1 (started yesterday)
+    for (const startDay of [0, 1, 2]) {
+      console.log(`Fetching live status for train: ${trainNo}, startDay: ${startDay}`);
 
-    const response = await fetch(`https://irctc-api2.p.rapidapi.com/liveTrain?trainNumber=${trainNo}&startDay=${startDay}`, {
-      method: "GET",
-      headers: {
-        "x-rapidapi-key": apiKey,
-        "x-rapidapi-host": "irctc-api2.p.rapidapi.com"
+      try {
+        const response = await fetch(`https://irctc-train-api.p.rapidapi.com/api/v1/live-train-status?trainNo=${trainNo}&startDay=${startDay}`, {
+          method: "GET",
+          headers: {
+            "x-rapidapi-key": apiKey,
+            "x-rapidapi-host": "irctc-train-api.p.rapidapi.com"
+          }
+        });
+
+        const data = await response.json();
+        console.log(`Live train response (startDay=${startDay}):`, JSON.stringify(data).substring(0, 300));
+
+        // Check if we got valid data
+        if (data && data.status === true && data.data) {
+          return new Response(
+            JSON.stringify(data),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        // If status is false but has a message about train not started, try next startDay
+        if (data?.message?.toLowerCase().includes('not started') || 
+            data?.message?.toLowerCase().includes('yet to start')) {
+          console.log(`Train not started for startDay=${startDay}, trying next...`);
+          continue;
+        }
+
+        // Return data even if not ideal
+        if (response.ok) {
+          return new Response(
+            JSON.stringify(data),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } catch (err) {
+        console.log(`Error with startDay=${startDay}:`, err);
       }
-    });
+    }
 
-    const data = await response.json();
-    console.log("Live train response:", JSON.stringify(data).substring(0, 300));
-
+    // If all attempts failed
     return new Response(
-      JSON.stringify(data),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: "Could not fetch train status. Train may not be running." }),
+      { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: unknown) {
     console.error('Live train error:', error);
