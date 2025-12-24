@@ -5,99 +5,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Primary API: irctc-api2
-const PRIMARY_API = {
-  host: "irctc-api2.p.rapidapi.com",
-  endpoint: (source: string, destination: string, date: string, classType: string, quota: string) => 
-    `/trainAvailability?source=${source}&destination=${destination}&date=${date}&classType=${classType}&quota=${quota}`
-};
-
-// Fallback API: irctc1
-const FALLBACK_API = {
-  host: "irctc1.p.rapidapi.com",
-  endpoint: (source: string, destination: string, classType: string, quota: string, trainNo: string) => 
-    `/api/v2/checkSeatAvailability?classType=${classType}&fromStationCode=${source}&quota=${quota}&toStationCode=${destination}&trainNo=${trainNo}`
-};
-
-async function fetchWithFallback(
-  source: string, 
-  destination: string, 
-  date: string, 
-  classType: string, 
-  quota: string,
-  trainNo: string,
-  apiKey: string
-) {
-  // Convert date format from YYYY-MM-DD to DD-MM-YYYY for primary API
-  const dateParts = date.split('-');
-  const formattedDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
-
-  // Try primary API first
-  console.log(`Trying primary API: ${PRIMARY_API.host}`);
-  try {
-    const url = `https://${PRIMARY_API.host}${PRIMARY_API.endpoint(source, destination, formattedDate, classType, quota)}`;
-    console.log(`Primary URL: ${url}`);
-    
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "x-rapidapi-key": apiKey,
-        "x-rapidapi-host": PRIMARY_API.host
-      }
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data && !data.error) {
-        console.log("Primary API succeeded");
-        return { data, source: 'primary' };
-      }
-    }
-    console.log(`Primary API failed with status: ${response.status}`);
-  } catch (error) {
-    console.log(`Primary API error: ${error}`);
-  }
-
-  // Try fallback API (requires trainNo)
-  if (trainNo) {
-    console.log(`Trying fallback API: ${FALLBACK_API.host}`);
-    try {
-      const url = `https://${FALLBACK_API.host}${FALLBACK_API.endpoint(source, destination, classType, quota, trainNo)}`;
-      console.log(`Fallback URL: ${url}`);
-      
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "x-rapidapi-key": apiKey,
-          "x-rapidapi-host": FALLBACK_API.host
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log("Fallback API succeeded");
-        return { data, source: 'fallback' };
-      }
-      console.log(`Fallback API failed with status: ${response.status}`);
-    } catch (error) {
-      console.log(`Fallback API error: ${error}`);
-    }
-  }
-
-  throw new Error("All API endpoints failed");
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { source, destination, date, classType, quota, trainNo } = await req.json();
+    const { classType, fromStationCode, quota, toStationCode, trainNo } = await req.json();
     
-    if (!source || !destination || !date || !classType || !quota) {
+    if (!classType || !fromStationCode || !quota || !toStationCode || !trainNo) {
       return new Response(
-        JSON.stringify({ error: "source, destination, date, classType, and quota required" }),
+        JSON.stringify({ error: "classType, fromStationCode, quota, toStationCode, and trainNo required" }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -111,10 +29,18 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Checking seat availability: ${source} to ${destination} on ${date}, class: ${classType}, quota: ${quota}`);
+    console.log(`Checking seat availability: ${trainNo} from ${fromStationCode} to ${toStationCode}, class: ${classType}, quota: ${quota}`);
 
-    const { data, source: apiSource } = await fetchWithFallback(source, destination, date, classType, quota, trainNo || '', apiKey);
-    console.log(`Seat availability response from ${apiSource}:`, JSON.stringify(data).substring(0, 200));
+    const response = await fetch(`https://irctc1.p.rapidapi.com/api/v1/checkSeatAvailability?classType=${classType}&fromStationCode=${fromStationCode}&quota=${quota}&toStationCode=${toStationCode}&trainNo=${trainNo}`, {
+      method: "GET",
+      headers: {
+        "x-rapidapi-key": apiKey,
+        "x-rapidapi-host": "irctc1.p.rapidapi.com"
+      }
+    });
+
+    const data = await response.json();
+    console.log("Seat availability response:", JSON.stringify(data).substring(0, 300));
 
     return new Response(
       JSON.stringify(data),

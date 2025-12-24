@@ -106,8 +106,8 @@ export default function SeatAvailability() {
   const [results, setResults] = useState<any>(null);
 
   const handleSearch = async () => {
-    if (!source || !destination || !date) {
-      toast.error("Please fill source, destination and date");
+    if (!source || !destination || !trainNo) {
+      toast.error("Please fill source, destination and train number");
       return;
     }
 
@@ -133,7 +133,13 @@ export default function SeatAvailability() {
 
     try {
       const { data, error } = await supabase.functions.invoke('seat-availability', {
-        body: { source, destination, date, classType, quota, trainNo }
+        body: { 
+          classType, 
+          fromStationCode: source, 
+          quota, 
+          toStationCode: destination, 
+          trainNo 
+        }
       });
 
       if (error) throw error;
