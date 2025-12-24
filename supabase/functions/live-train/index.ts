@@ -29,16 +29,16 @@ serve(async (req) => {
       );
     }
 
-    // Try with startDay=0 (started today) first, then startDay=1 (started yesterday)
-    for (const startDay of [0, 1, 2]) {
+    // Try with startDay=1 first (most common), then 0 and 2
+    for (const startDay of [1, 0, 2]) {
       console.log(`Fetching live status for train: ${trainNo}, startDay: ${startDay}`);
 
       try {
-        const response = await fetch(`https://irctc-train-api.p.rapidapi.com/api/v1/live-train-status?trainNo=${trainNo}&startDay=${startDay}`, {
+        const response = await fetch(`https://irctc-api2.p.rapidapi.com/liveTrain?trainNumber=${trainNo}&startDay=${startDay}`, {
           method: "GET",
           headers: {
             "x-rapidapi-key": apiKey,
-            "x-rapidapi-host": "irctc-train-api.p.rapidapi.com"
+            "x-rapidapi-host": "irctc-api2.p.rapidapi.com"
           }
         });
 
@@ -56,23 +56,32 @@ serve(async (req) => {
           );
         }
 
-        // Check if we got valid data
-        if (data && data.status === true && data.data) {
+        // Check if we got valid data (success: true with data)
+        if (data && data.success === true && data.data) {
           return new Response(
             JSON.stringify(data),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
         
-        // If status is false but has a message about train not started, try next startDay
-        if (data?.message?.toLowerCase().includes('not started') || 
-            data?.message?.toLowerCase().includes('yet to start')) {
+        // If success is false but has error about train not started, try next startDay
+        if (data?.error?.toLowerCase().includes('not started') || 
+            data?.error?.toLowerCase().includes('yet to start') ||
+            data?.error?.toLowerCase().includes('not running')) {
           console.log(`Train not started for startDay=${startDay}, trying next...`);
           continue;
         }
 
+        // If success is false with an error, return it
+        if (data?.success === false && data?.error) {
+          return new Response(
+            JSON.stringify({ error: data.error }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
         // Return data even if not ideal
-        if (response.ok) {
+        if (response.ok && data) {
           return new Response(
             JSON.stringify(data),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
