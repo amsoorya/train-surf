@@ -2,15 +2,17 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Search, Train, Clock, ExternalLink, Calendar, FlaskConical } from "lucide-react";
+import { ArrowLeft, Search, Train, Clock, ExternalLink, CalendarIcon, FlaskConical } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { StationAutocomplete } from "@/components/StationAutocomplete";
 import { useApp } from "@/contexts/AppContext";
 import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 interface TrainResult {
   trainNo: string;
@@ -48,7 +50,7 @@ export default function TrainsBetween() {
   const { t, isTesterMode } = useApp();
   const [fromStation, setFromStation] = useState("");
   const [toStation, setToStation] = useState("");
-  const [date, setDate] = useState(format(new Date(), "dd-MM-yyyy"));
+  const [date, setDate] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
   const [trains, setTrains] = useState<TrainResult[]>([]);
 
@@ -72,7 +74,7 @@ export default function TrainsBetween() {
 
     try {
       const { data: result, error } = await supabase.functions.invoke("trains-between", {
-        body: { fromStation, toStation, date }
+        body: { fromStation, toStation, date: format(date, "yyyy-MM-dd") }
       });
 
       if (error) throw error;
@@ -140,18 +142,31 @@ export default function TrainsBetween() {
               />
             </div>
             <div>
-              <Label htmlFor="date">{t("journeyDate")}</Label>
-              <div className="relative mt-1">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  id="date"
-                  type="text"
-                  placeholder="DD-MM-YYYY"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+              <Label>{t("journeyDate")}</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal h-12 mt-1",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={(d) => d && setDate(d)}
+                    disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <Button 
               variant="gradient" 

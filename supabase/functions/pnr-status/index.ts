@@ -17,6 +17,19 @@ const FALLBACK_API = {
   endpoint: (pnr: string) => `/api/v3/getPNRStatus?pnrNumber=${pnr}`
 };
 
+function isValidResponse(data: any): boolean {
+  // Check various error indicators
+  if (!data) return false;
+  if (data.error) return false;
+  if (data.status === false) return false;
+  if (data.message && data.message.toLowerCase().includes('error')) return false;
+  if (data.message && data.message.toLowerCase().includes('invalid')) return false;
+  if (data.message && data.message.toLowerCase().includes('not found')) return false;
+  // If we have PNR data, consider it valid
+  if (data.data || data.pnr || data.passengers || data.body) return true;
+  return true;
+}
+
 async function fetchWithFallback(pnr: string, apiKey: string) {
   // Try primary API first
   console.log(`Trying primary API: ${PRIMARY_API.host}`);
@@ -31,12 +44,13 @@ async function fetchWithFallback(pnr: string, apiKey: string) {
 
     if (response.ok) {
       const data = await response.json();
-      if (data && !data.error) {
-        console.log("Primary API succeeded");
+      console.log("Primary API response:", JSON.stringify(data).substring(0, 300));
+      if (isValidResponse(data)) {
+        console.log("Primary API succeeded with valid data");
         return { data, source: 'primary' };
       }
     }
-    console.log(`Primary API failed with status: ${response.status}`);
+    console.log(`Primary API failed or returned invalid data`);
   } catch (error) {
     console.log(`Primary API error: ${error}`);
   }
@@ -54,15 +68,18 @@ async function fetchWithFallback(pnr: string, apiKey: string) {
 
     if (response.ok) {
       const data = await response.json();
-      console.log("Fallback API succeeded");
-      return { data, source: 'fallback' };
+      console.log("Fallback API response:", JSON.stringify(data).substring(0, 300));
+      if (isValidResponse(data)) {
+        console.log("Fallback API succeeded with valid data");
+        return { data, source: 'fallback' };
+      }
     }
-    console.log(`Fallback API failed with status: ${response.status}`);
+    console.log(`Fallback API failed or returned invalid data, status: ${response.status}`);
   } catch (error) {
     console.log(`Fallback API error: ${error}`);
   }
 
-  throw new Error("All API endpoints failed");
+  throw new Error("All API endpoints failed or returned invalid data");
 }
 
 serve(async (req) => {
@@ -92,7 +109,7 @@ serve(async (req) => {
     console.log(`Fetching PNR status for: ${pnr}`);
 
     const { data, source } = await fetchWithFallback(pnr, apiKey);
-    console.log(`PNR response from ${source}:`, JSON.stringify(data).substring(0, 200));
+    console.log(`PNR response from ${source}`);
 
     return new Response(
       JSON.stringify(data),
