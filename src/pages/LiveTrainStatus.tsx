@@ -26,7 +26,7 @@ interface NextStoppageInfo {
 }
 
 interface LiveTrainAPIData {
-  status?: boolean;
+  success?: boolean;
   data?: {
     train_number: string;
     train_name: string;
@@ -149,8 +149,8 @@ export default function LiveTrainStatus() {
       }
 
       // Check for API error messages
-      if (result?.status === false || result?.message) {
-        toast({ title: result.message || "Could not fetch train status", variant: "destructive" });
+      if (result?.success === false || result?.error) {
+        toast({ title: result.error || result.message || "Could not fetch train status", variant: "destructive" });
         return;
       }
 
@@ -164,7 +164,7 @@ export default function LiveTrainStatus() {
   };
 
   const trainData = liveData?.data;
-  const hasData = (liveData?.status === true && trainData) || testData;
+  const hasData = (liveData?.success === true && trainData) || testData;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -217,7 +217,7 @@ export default function LiveTrainStatus() {
         </div>
 
         {/* Real API Results */}
-        {liveData?.status === true && trainData && (
+        {liveData?.success === true && trainData && (
           <div className="glass-card p-4 animate-slide-up">
             {/* Train Info */}
             <div className="flex items-center gap-3 mb-4 pb-4 border-b border-border">
