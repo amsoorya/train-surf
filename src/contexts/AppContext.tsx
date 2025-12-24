@@ -179,6 +179,13 @@ const baseTranslations: Record<string, string> = {
   railmadadHelpline: "RailMadad Helpline",
   securityHelpline: "Security Helpline (RPF)",
   vigilanceComplaints: "Vigilance Complaints",
+  
+  // Seat Availability
+  seatAvailability: "Seat Availability",
+  checkAvailability: "Check Availability",
+  availabilityResults: "Availability Results",
+  classType: "Class Type",
+  optional: "Optional",
 };
 
 interface AppContextType {

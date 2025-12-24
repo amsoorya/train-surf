@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useApp } from "@/contexts/AppContext";
-import { ArrowLeft, User, Phone, Calendar, Users, Save, Star, Home, History, MessageCircle, FlaskConical, Train, AlertCircle, HelpCircle, PhoneCall, Mail, Lightbulb, Send } from "lucide-react";
+import { ArrowLeft, User, Phone, Calendar, Users, Save, Star, Home, History, MessageCircle, FlaskConical, Train, AlertCircle, HelpCircle, PhoneCall, Mail, Lightbulb, Send, Armchair } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface ProfileData {
@@ -165,6 +165,7 @@ export default function Profile() {
     { icon: MessageCircle, label: t("contact"), path: "/contact" },
     { icon: FlaskConical, label: t("tester"), path: "/sandbox" },
     { icon: Star, label: t("favorites"), path: "/favorites" },
+    { icon: Armchair, label: t("seatAvailability"), path: "/seat-availability" },
   ];
 
   return (
