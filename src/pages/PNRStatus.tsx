@@ -28,21 +28,90 @@ interface PNRData {
   error?: string;
 }
 
-// Test data for tester mode
-const TEST_PNR_DATA: PNRData = {
-  trainNo: "12301",
-  trainName: "Rajdhani Express",
-  doj: "25-12-2025",
-  from: "NDLS",
-  to: "HWH",
-  boardingPoint: "NDLS",
-  class: "3A",
-  quota: "GN",
-  chartStatus: "Chart Prepared",
-  passengers: [
-    { number: 1, bookingStatus: "CNF/B2/45", currentStatus: "CNF/B2/45" },
-    { number: 2, bookingStatus: "CNF/B2/46", currentStatus: "CNF/B2/46" },
-  ],
+// Extended test data for tester mode
+const TEST_PNR_DATA_LIST: PNRData[] = [
+  {
+    trainNo: "12301",
+    trainName: "Rajdhani Express",
+    doj: "25-12-2025",
+    from: "NDLS",
+    to: "HWH",
+    boardingPoint: "NDLS",
+    class: "3A",
+    quota: "GN",
+    chartStatus: "Chart Prepared",
+    passengers: [
+      { number: 1, bookingStatus: "CNF/B2/45", currentStatus: "CNF/B2/45" },
+      { number: 2, bookingStatus: "CNF/B2/46", currentStatus: "CNF/B2/46" },
+    ],
+  },
+  {
+    trainNo: "12259",
+    trainName: "Duronto Express",
+    doj: "26-12-2025",
+    from: "BCT",
+    to: "NDLS",
+    boardingPoint: "BCT",
+    class: "2A",
+    quota: "GN",
+    chartStatus: "Chart Not Prepared",
+    passengers: [
+      { number: 1, bookingStatus: "WL/15", currentStatus: "WL/8" },
+      { number: 2, bookingStatus: "WL/16", currentStatus: "WL/9" },
+      { number: 3, bookingStatus: "WL/17", currentStatus: "WL/10" },
+    ],
+  },
+  {
+    trainNo: "12951",
+    trainName: "Mumbai Rajdhani",
+    doj: "27-12-2025",
+    from: "BCT",
+    to: "NDLS",
+    boardingPoint: "BCT",
+    class: "1A",
+    quota: "TQ",
+    chartStatus: "Chart Prepared",
+    passengers: [
+      { number: 1, bookingStatus: "RAC/12", currentStatus: "CNF/A1/22" },
+    ],
+  },
+  {
+    trainNo: "12621",
+    trainName: "Tamil Nadu Express",
+    doj: "28-12-2025",
+    from: "MAS",
+    to: "NDLS",
+    boardingPoint: "MAS",
+    class: "SL",
+    quota: "GN",
+    chartStatus: "Chart Prepared",
+    passengers: [
+      { number: 1, bookingStatus: "CNF/S5/32", currentStatus: "CNF/S5/32" },
+      { number: 2, bookingStatus: "CNF/S5/33", currentStatus: "CNF/S5/33" },
+      { number: 3, bookingStatus: "CNF/S5/34", currentStatus: "CNF/S5/34" },
+      { number: 4, bookingStatus: "CNF/S5/35", currentStatus: "CNF/S5/35" },
+    ],
+  },
+  {
+    trainNo: "12839",
+    trainName: "Chennai Mail",
+    doj: "29-12-2025",
+    from: "HWH",
+    to: "MAS",
+    boardingPoint: "HWH",
+    class: "3A",
+    quota: "LD",
+    chartStatus: "Chart Not Prepared",
+    passengers: [
+      { number: 1, bookingStatus: "RAC/5", currentStatus: "RAC/3" },
+      { number: 2, bookingStatus: "RAC/6", currentStatus: "RAC/4" },
+    ],
+  },
+];
+
+// Get random test PNR data
+const getTestPNRData = (): PNRData => {
+  return TEST_PNR_DATA_LIST[Math.floor(Math.random() * TEST_PNR_DATA_LIST.length)];
 };
 
 export default function PNRStatus() {
@@ -64,7 +133,7 @@ export default function PNRStatus() {
     // Use test data if tester mode is on
     if (isTesterMode) {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      setData(TEST_PNR_DATA);
+      setData(getTestPNRData());
       toast({ title: `${t("testerMode")}: ${t("success")}` });
       setLoading(false);
       return;
