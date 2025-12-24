@@ -11,36 +11,44 @@ import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useApp } from "@/contexts/AppContext";
 
 interface Passenger {
-  Number: number;
-  BookingStatus: string;
-  CurrentStatus: string;
-  Coach?: string;
-  Berth?: number;
+  number: number;
+  bookingStatus: string;
+  currentStatus: string;
+  coach?: string;
+  berth?: number;
 }
 
 interface PNRAPIData {
   success: boolean;
   data?: {
-    Pnr: string;
-    TrainNo: string;
-    TrainName: string;
-    Doj: string;
-    BookingDate: string;
-    Quota: string;
-    DestinationDoj: string;
-    SourceDoj: string;
-    From: string;
-    To: string;
-    ReservationUpto: string;
-    BoardingPoint: string;
-    Class: string;
-    ChartPrepared: boolean;
-    BoardingStationName: string;
-    ReservationUptoName: string;
-    SourceName: string;
-    DestinationName: string;
-    PassengerCount: number;
-    PassengerStatus: Passenger[];
+    pnr: string;
+    trainNumber: string;
+    trainName: string;
+    journeyDate: string;
+    bookingDate: string;
+    source: string;
+    destination: string;
+    boardingPoint: string;
+    class: string;
+    chartPrepared: boolean;
+    trainStatus: string;
+    departureTime: string;
+    arrivalTime: string;
+    duration: string;
+    passengers: Passenger[];
+    fare?: {
+      bookingFare: string;
+      ticketFare: string;
+    };
+    ratings?: {
+      overall: number;
+      food: number;
+      punctuality: number;
+      cleanliness: number;
+      ratingCount: number;
+    };
+    hasPantry: boolean;
+    isCancelled: boolean;
   };
   error?: string;
   message?: string;
@@ -229,8 +237,8 @@ export default function PNRStatus() {
                 <Train className="w-6 h-6 text-primary" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-foreground">{pnrData.TrainNo} - {pnrData.TrainName}</h3>
-                <p className="text-sm text-muted-foreground">{pnrData.Class} • {pnrData.Quota}</p>
+                <h3 className="font-semibold text-foreground">{pnrData.trainNumber} - {pnrData.trainName}</h3>
+                <p className="text-sm text-muted-foreground">{pnrData.class}</p>
               </div>
             </div>
 
@@ -240,52 +248,76 @@ export default function PNRStatus() {
                 <MapPin className="w-4 h-4 text-success mt-0.5" />
                 <div>
                   <p className="text-xs text-muted-foreground">{t("fromStation")}</p>
-                  <p className="font-medium text-foreground">{pnrData.SourceName || pnrData.From}</p>
+                  <p className="font-medium text-foreground">{pnrData.source}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-destructive mt-0.5" />
                 <div>
                   <p className="text-xs text-muted-foreground">{t("toStation")}</p>
-                  <p className="font-medium text-foreground">{pnrData.DestinationName || pnrData.To}</p>
+                  <p className="font-medium text-foreground">{pnrData.destination}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <Calendar className="w-4 h-4 text-primary mt-0.5" />
                 <div>
                   <p className="text-xs text-muted-foreground">{t("journeyDate")}</p>
-                  <p className="font-medium text-foreground">{pnrData.Doj}</p>
+                  <p className="font-medium text-foreground">{pnrData.journeyDate}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <Clock className="w-4 h-4 text-warning mt-0.5" />
                 <div>
                   <p className="text-xs text-muted-foreground">{t("chartStatus")}</p>
-                  <p className="font-medium text-foreground">{pnrData.ChartPrepared ? "Chart Prepared" : "Not Prepared"}</p>
+                  <p className="font-medium text-foreground">{pnrData.chartPrepared ? "Chart Prepared" : "Not Prepared"}</p>
                 </div>
               </div>
             </div>
 
+            {/* Timing Details */}
+            <div className="grid grid-cols-3 gap-2 mb-4 p-3 bg-muted/50 rounded-lg">
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground">Departure</p>
+                <p className="font-semibold text-foreground">{pnrData.departureTime}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground">Duration</p>
+                <p className="font-semibold text-foreground">{pnrData.duration}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground">Arrival</p>
+                <p className="font-semibold text-foreground">{pnrData.arrivalTime}</p>
+              </div>
+            </div>
+
             {/* Boarding Point */}
-            {pnrData.BoardingStationName && (
+            {pnrData.boardingPoint && (
               <div className="p-3 bg-muted/50 rounded-lg mb-4">
                 <p className="text-xs text-muted-foreground">Boarding Point</p>
-                <p className="font-medium text-foreground">{pnrData.BoardingStationName} ({pnrData.BoardingPoint})</p>
+                <p className="font-medium text-foreground">{pnrData.boardingPoint}</p>
+              </div>
+            )}
+
+            {/* Fare */}
+            {pnrData.fare && (
+              <div className="p-3 bg-primary/10 rounded-lg mb-4">
+                <p className="text-xs text-muted-foreground">Ticket Fare</p>
+                <p className="font-semibold text-primary">₹{pnrData.fare.ticketFare}</p>
               </div>
             )}
 
             {/* Passengers */}
             <div className="space-y-2">
-              <h4 className="font-semibold text-foreground mb-2">{t("passengerDetails")} ({pnrData.PassengerCount})</h4>
-              {pnrData.PassengerStatus?.map((p, i) => (
+              <h4 className="font-semibold text-foreground mb-2">{t("passengerDetails")} ({pnrData.passengers?.length || 0})</h4>
+              {pnrData.passengers?.map((p, i) => (
                 <div key={i} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-medium">{t("passenger")} {p.Number}</span>
+                    <span className="font-medium">{t("passenger")} {p.number}</span>
                   </div>
                   <div className="text-right">
-                    <p className={`font-semibold ${getStatusColor(p.CurrentStatus)}`}>{p.CurrentStatus}</p>
-                    <p className="text-xs text-muted-foreground">{t("bookingStatus")}: {p.BookingStatus}</p>
+                    <p className={`font-semibold ${getStatusColor(p.currentStatus)}`}>{p.currentStatus}</p>
+                    <p className="text-xs text-muted-foreground">{t("bookingStatus")}: {p.bookingStatus}</p>
                   </div>
                 </div>
               ))}
