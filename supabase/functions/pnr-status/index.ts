@@ -5,6 +5,66 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Primary API: irctc-api2
+const PRIMARY_API = {
+  host: "irctc-api2.p.rapidapi.com",
+  endpoint: (pnr: string) => `/pnrStatus?pnr=${pnr}`
+};
+
+// Fallback API: irctc1
+const FALLBACK_API = {
+  host: "irctc1.p.rapidapi.com",
+  endpoint: (pnr: string) => `/api/v3/getPNRStatus?pnrNumber=${pnr}`
+};
+
+async function fetchWithFallback(pnr: string, apiKey: string) {
+  // Try primary API first
+  console.log(`Trying primary API: ${PRIMARY_API.host}`);
+  try {
+    const response = await fetch(`https://${PRIMARY_API.host}${PRIMARY_API.endpoint(pnr)}`, {
+      method: "GET",
+      headers: {
+        "x-rapidapi-key": apiKey,
+        "x-rapidapi-host": PRIMARY_API.host
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data && !data.error) {
+        console.log("Primary API succeeded");
+        return { data, source: 'primary' };
+      }
+    }
+    console.log(`Primary API failed with status: ${response.status}`);
+  } catch (error) {
+    console.log(`Primary API error: ${error}`);
+  }
+
+  // Try fallback API
+  console.log(`Trying fallback API: ${FALLBACK_API.host}`);
+  try {
+    const response = await fetch(`https://${FALLBACK_API.host}${FALLBACK_API.endpoint(pnr)}`, {
+      method: "GET",
+      headers: {
+        "x-rapidapi-key": apiKey,
+        "x-rapidapi-host": FALLBACK_API.host
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log("Fallback API succeeded");
+      return { data, source: 'fallback' };
+    }
+    console.log(`Fallback API failed with status: ${response.status}`);
+  } catch (error) {
+    console.log(`Fallback API error: ${error}`);
+  }
+
+  throw new Error("All API endpoints failed");
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -31,18 +91,8 @@ serve(async (req) => {
 
     console.log(`Fetching PNR status for: ${pnr}`);
 
-    const response = await fetch("https://pnr-status10.p.rapidapi.com/api/pnr-status", {
-      method: "POST",
-      headers: {
-        "x-rapidapi-key": apiKey,
-        "x-rapidapi-host": "pnr-status10.p.rapidapi.com",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ pnr })
-    });
-
-    const data = await response.json();
-    console.log("PNR response:", JSON.stringify(data).substring(0, 200));
+    const { data, source } = await fetchWithFallback(pnr, apiKey);
+    console.log(`PNR response from ${source}:`, JSON.stringify(data).substring(0, 200));
 
     return new Response(
       JSON.stringify(data),
