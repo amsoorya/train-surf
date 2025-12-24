@@ -16,6 +16,7 @@ import Contact from "./pages/Contact";
 import PNRStatus from "./pages/PNRStatus";
 import TrainsBetween from "./pages/TrainsBetween";
 import LiveTrainStatus from "./pages/LiveTrainStatus";
+import SeatAvailability from "./pages/SeatAvailability";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/pnr-status" element={<PNRStatus />} />
               <Route path="/trains-between" element={<TrainsBetween />} />
               <Route path="/live-train" element={<LiveTrainStatus />} />
+              <Route path="/seat-availability" element={<SeatAvailability />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
