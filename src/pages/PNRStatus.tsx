@@ -4,11 +4,47 @@ import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Search, Ticket, User, MapPin, Calendar, Train, Clock, ExternalLink, FlaskConical } from "lucide-react";
+import { ArrowLeft, Search, Ticket, User, MapPin, Calendar, Train, Clock, ExternalLink, FlaskConical, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useApp } from "@/contexts/AppContext";
+
+interface Passenger {
+  Number: number;
+  BookingStatus: string;
+  CurrentStatus: string;
+  Coach?: string;
+  Berth?: number;
+}
+
+interface PNRAPIData {
+  success: boolean;
+  data?: {
+    Pnr: string;
+    TrainNo: string;
+    TrainName: string;
+    Doj: string;
+    BookingDate: string;
+    Quota: string;
+    DestinationDoj: string;
+    SourceDoj: string;
+    From: string;
+    To: string;
+    ReservationUpto: string;
+    BoardingPoint: string;
+    Class: string;
+    ChartPrepared: boolean;
+    BoardingStationName: string;
+    ReservationUptoName: string;
+    SourceName: string;
+    DestinationName: string;
+    PassengerCount: number;
+    PassengerStatus: Passenger[];
+  };
+  error?: string;
+  message?: string;
+}
 
 interface PNRData {
   trainNo?: string;
@@ -61,52 +97,6 @@ const TEST_PNR_DATA_LIST: PNRData[] = [
       { number: 3, bookingStatus: "WL/17", currentStatus: "WL/10" },
     ],
   },
-  {
-    trainNo: "12951",
-    trainName: "Mumbai Rajdhani",
-    doj: "27-12-2025",
-    from: "BCT",
-    to: "NDLS",
-    boardingPoint: "BCT",
-    class: "1A",
-    quota: "TQ",
-    chartStatus: "Chart Prepared",
-    passengers: [
-      { number: 1, bookingStatus: "RAC/12", currentStatus: "CNF/A1/22" },
-    ],
-  },
-  {
-    trainNo: "12621",
-    trainName: "Tamil Nadu Express",
-    doj: "28-12-2025",
-    from: "MAS",
-    to: "NDLS",
-    boardingPoint: "MAS",
-    class: "SL",
-    quota: "GN",
-    chartStatus: "Chart Prepared",
-    passengers: [
-      { number: 1, bookingStatus: "CNF/S5/32", currentStatus: "CNF/S5/32" },
-      { number: 2, bookingStatus: "CNF/S5/33", currentStatus: "CNF/S5/33" },
-      { number: 3, bookingStatus: "CNF/S5/34", currentStatus: "CNF/S5/34" },
-      { number: 4, bookingStatus: "CNF/S5/35", currentStatus: "CNF/S5/35" },
-    ],
-  },
-  {
-    trainNo: "12839",
-    trainName: "Chennai Mail",
-    doj: "29-12-2025",
-    from: "HWH",
-    to: "MAS",
-    boardingPoint: "HWH",
-    class: "3A",
-    quota: "LD",
-    chartStatus: "Chart Not Prepared",
-    passengers: [
-      { number: 1, bookingStatus: "RAC/5", currentStatus: "RAC/3" },
-      { number: 2, bookingStatus: "RAC/6", currentStatus: "RAC/4" },
-    ],
-  },
 ];
 
 // Get random test PNR data
@@ -119,7 +109,8 @@ export default function PNRStatus() {
   const { t, isTesterMode } = useApp();
   const [pnr, setPnr] = useState("");
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<PNRData | null>(null);
+  const [apiData, setApiData] = useState<PNRAPIData | null>(null);
+  const [testData, setTestData] = useState<PNRData | null>(null);
 
   const handleSearch = async () => {
     if (!pnr || pnr.length !== 10) {
@@ -128,12 +119,13 @@ export default function PNRStatus() {
     }
 
     setLoading(true);
-    setData(null);
+    setApiData(null);
+    setTestData(null);
 
     // Use test data if tester mode is on
     if (isTesterMode) {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      setData(getTestPNRData());
+      setTestData(getTestPNRData());
       toast({ title: `${t("testerMode")}: ${t("success")}` });
       setLoading(false);
       return;
@@ -146,12 +138,19 @@ export default function PNRStatus() {
 
       if (error) throw error;
       
+      // Handle API error response
+      if (result?.success === false) {
+        const errorMessage = result.error || result.message || "PNR not found";
+        toast({ title: errorMessage, variant: "destructive" });
+        return;
+      }
+      
       if (result?.error) {
         toast({ title: result.error, variant: "destructive" });
         return;
       }
 
-      setData(result);
+      setApiData(result);
     } catch (err) {
       console.error("PNR error:", err);
       toast({ title: t("error"), variant: "destructive" });
@@ -166,6 +165,9 @@ export default function PNRStatus() {
     if (status?.includes("RAC")) return "text-primary";
     return "text-foreground";
   };
+
+  const pnrData = apiData?.data;
+  const hasRealData = apiData?.success === true && pnrData;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -218,8 +220,8 @@ export default function PNRStatus() {
           </div>
         </div>
 
-        {/* Results */}
-        {data && !data.error && (
+        {/* Real API Results */}
+        {hasRealData && (
           <div className="glass-card p-4 animate-slide-up">
             {/* Train Info */}
             <div className="flex items-center gap-3 mb-4 pb-4 border-b border-border">
@@ -227,8 +229,8 @@ export default function PNRStatus() {
                 <Train className="w-6 h-6 text-primary" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-foreground">{data.trainNo} - {data.trainName}</h3>
-                <p className="text-sm text-muted-foreground">{data.class} • {data.quota}</p>
+                <h3 className="font-semibold text-foreground">{pnrData.TrainNo} - {pnrData.TrainName}</h3>
+                <p className="text-sm text-muted-foreground">{pnrData.Class} • {pnrData.Quota}</p>
               </div>
             </div>
 
@@ -238,28 +240,110 @@ export default function PNRStatus() {
                 <MapPin className="w-4 h-4 text-success mt-0.5" />
                 <div>
                   <p className="text-xs text-muted-foreground">{t("fromStation")}</p>
-                  <p className="font-medium text-foreground">{data.from}</p>
+                  <p className="font-medium text-foreground">{pnrData.SourceName || pnrData.From}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-destructive mt-0.5" />
                 <div>
                   <p className="text-xs text-muted-foreground">{t("toStation")}</p>
-                  <p className="font-medium text-foreground">{data.to}</p>
+                  <p className="font-medium text-foreground">{pnrData.DestinationName || pnrData.To}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <Calendar className="w-4 h-4 text-primary mt-0.5" />
                 <div>
                   <p className="text-xs text-muted-foreground">{t("journeyDate")}</p>
-                  <p className="font-medium text-foreground">{data.doj}</p>
+                  <p className="font-medium text-foreground">{pnrData.Doj}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <Clock className="w-4 h-4 text-warning mt-0.5" />
                 <div>
                   <p className="text-xs text-muted-foreground">{t("chartStatus")}</p>
-                  <p className="font-medium text-foreground">{data.chartStatus || "Not Prepared"}</p>
+                  <p className="font-medium text-foreground">{pnrData.ChartPrepared ? "Chart Prepared" : "Not Prepared"}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Boarding Point */}
+            {pnrData.BoardingStationName && (
+              <div className="p-3 bg-muted/50 rounded-lg mb-4">
+                <p className="text-xs text-muted-foreground">Boarding Point</p>
+                <p className="font-medium text-foreground">{pnrData.BoardingStationName} ({pnrData.BoardingPoint})</p>
+              </div>
+            )}
+
+            {/* Passengers */}
+            <div className="space-y-2">
+              <h4 className="font-semibold text-foreground mb-2">{t("passengerDetails")} ({pnrData.PassengerCount})</h4>
+              {pnrData.PassengerStatus?.map((p, i) => (
+                <div key={i} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-medium">{t("passenger")} {p.Number}</span>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-semibold ${getStatusColor(p.CurrentStatus)}`}>{p.CurrentStatus}</p>
+                    <p className="text-xs text-muted-foreground">{t("bookingStatus")}: {p.BookingStatus}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Book on IRCTC */}
+            <Button
+              variant="outline"
+              className="w-full mt-4"
+              onClick={() => window.open("https://www.irctc.co.in", "_blank")}
+            >
+              <ExternalLink className="w-4 h-4 mr-2" /> {t("bookNow")}
+            </Button>
+          </div>
+        )}
+
+        {/* Test Mode Results */}
+        {testData && !testData.error && (
+          <div className="glass-card p-4 animate-slide-up">
+            {/* Train Info */}
+            <div className="flex items-center gap-3 mb-4 pb-4 border-b border-border">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Train className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-foreground">{testData.trainNo} - {testData.trainName}</h3>
+                <p className="text-sm text-muted-foreground">{testData.class} • {testData.quota}</p>
+              </div>
+            </div>
+
+            {/* Journey Details */}
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="flex items-start gap-2">
+                <MapPin className="w-4 h-4 text-success mt-0.5" />
+                <div>
+                  <p className="text-xs text-muted-foreground">{t("fromStation")}</p>
+                  <p className="font-medium text-foreground">{testData.from}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <MapPin className="w-4 h-4 text-destructive mt-0.5" />
+                <div>
+                  <p className="text-xs text-muted-foreground">{t("toStation")}</p>
+                  <p className="font-medium text-foreground">{testData.to}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <Calendar className="w-4 h-4 text-primary mt-0.5" />
+                <div>
+                  <p className="text-xs text-muted-foreground">{t("journeyDate")}</p>
+                  <p className="font-medium text-foreground">{testData.doj}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <Clock className="w-4 h-4 text-warning mt-0.5" />
+                <div>
+                  <p className="text-xs text-muted-foreground">{t("chartStatus")}</p>
+                  <p className="font-medium text-foreground">{testData.chartStatus || "Not Prepared"}</p>
                 </div>
               </div>
             </div>
@@ -267,7 +351,7 @@ export default function PNRStatus() {
             {/* Passengers */}
             <div className="space-y-2">
               <h4 className="font-semibold text-foreground mb-2">{t("passengerDetails")}</h4>
-              {data.passengers?.map((p, i) => (
+              {testData.passengers?.map((p, i) => (
                 <div key={i} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-muted-foreground" />

@@ -4,11 +4,46 @@ import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Search, Train, Clock, Navigation, RefreshCw, FlaskConical } from "lucide-react";
+import { ArrowLeft, Search, Train, Clock, Navigation, RefreshCw, FlaskConical, MapPin, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useApp } from "@/contexts/AppContext";
+
+interface LocationInfo {
+  type: number;
+  label: string;
+  message: string;
+  readable_message: string;
+  hint: string;
+}
+
+interface NextStoppageInfo {
+  next_stoppage_title: string;
+  next_stoppage: string;
+  next_stoppage_time_diff: string;
+  next_stoppage_delay: number;
+}
+
+interface LiveTrainAPIData {
+  status?: boolean;
+  data?: {
+    train_number: string;
+    train_name: string;
+    current_station_name: string;
+    status: string;
+    distance_from_source: number;
+    total_distance: number;
+    eta: string;
+    etd: string;
+    delay: number;
+    next_stoppage_info: NextStoppageInfo;
+    current_location_info: LocationInfo[];
+    upcoming_stations_count: number;
+  };
+  error?: string;
+  message?: string;
+}
 
 interface StationStatus {
   stationName: string;
@@ -66,54 +101,6 @@ const TEST_LIVE_DATA_LIST: LiveTrainData[] = [
       { stationName: "New Delhi", stationCode: "NDLS", arrivalTime: "08:35", departureTime: "-", delay: "-", distance: "1384 km", isPassed: false, isCurrent: false },
     ],
   },
-  {
-    trainNo: "12621",
-    trainName: "Tamil Nadu Express",
-    currentStation: "Nagpur (NGP)",
-    lastUpdated: new Date().toLocaleTimeString(),
-    delay: "45 mins late",
-    stations: [
-      { stationName: "Chennai Central", stationCode: "MAS", arrivalTime: "-", departureTime: "22:00", delay: "On Time", distance: "0 km", isPassed: true, isCurrent: false },
-      { stationName: "Vijayawada Jn", stationCode: "BZA", arrivalTime: "04:35", departureTime: "04:45", delay: "20 min late", distance: "432 km", isPassed: true, isCurrent: false },
-      { stationName: "Balharshah Jn", stationCode: "BPQ", arrivalTime: "12:15", departureTime: "12:20", delay: "35 min late", distance: "862 km", isPassed: true, isCurrent: false },
-      { stationName: "Nagpur", stationCode: "NGP", arrivalTime: "15:20", departureTime: "15:35", delay: "45 min late", distance: "1042 km", isPassed: false, isCurrent: true },
-      { stationName: "Bhopal Jn", stationCode: "BPL", arrivalTime: "21:25", departureTime: "21:35", delay: "-", distance: "1376 km", isPassed: false, isCurrent: false },
-      { stationName: "Agra Cantt", stationCode: "AGC", arrivalTime: "02:50", departureTime: "03:00", delay: "-", distance: "1750 km", isPassed: false, isCurrent: false },
-      { stationName: "New Delhi", stationCode: "NDLS", arrivalTime: "06:55", departureTime: "-", delay: "-", distance: "2175 km", isPassed: false, isCurrent: false },
-    ],
-  },
-  {
-    trainNo: "12839",
-    trainName: "Chennai Mail",
-    currentStation: "Kharagpur (KGP)",
-    lastUpdated: new Date().toLocaleTimeString(),
-    delay: "5 mins early",
-    stations: [
-      { stationName: "Howrah Jn", stationCode: "HWH", arrivalTime: "-", departureTime: "23:45", delay: "On Time", distance: "0 km", isPassed: true, isCurrent: false },
-      { stationName: "Kharagpur", stationCode: "KGP", arrivalTime: "01:48", departureTime: "01:53", delay: "5 min early", distance: "118 km", isPassed: false, isCurrent: true },
-      { stationName: "Bhadrak", stationCode: "BHC", arrivalTime: "04:38", departureTime: "04:40", delay: "-", distance: "302 km", isPassed: false, isCurrent: false },
-      { stationName: "Visakhapatnam", stationCode: "VSKP", arrivalTime: "10:30", departureTime: "10:45", delay: "-", distance: "710 km", isPassed: false, isCurrent: false },
-      { stationName: "Vijayawada Jn", stationCode: "BZA", arrivalTime: "17:00", departureTime: "17:10", delay: "-", distance: "1052 km", isPassed: false, isCurrent: false },
-      { stationName: "Chennai Central", stationCode: "MAS", arrivalTime: "22:45", departureTime: "-", delay: "-", distance: "1474 km", isPassed: false, isCurrent: false },
-    ],
-  },
-  {
-    trainNo: "22691",
-    trainName: "Rajdhani Express",
-    currentStation: "Bengaluru (SBC)",
-    lastUpdated: new Date().toLocaleTimeString(),
-    delay: "On Time",
-    stations: [
-      { stationName: "KSR Bengaluru", stationCode: "SBC", arrivalTime: "-", departureTime: "20:10", delay: "On Time", distance: "0 km", isPassed: false, isCurrent: true },
-      { stationName: "Dharmavaram Jn", stationCode: "DMM", arrivalTime: "23:08", departureTime: "23:10", delay: "-", distance: "209 km", isPassed: false, isCurrent: false },
-      { stationName: "Kurnool City", stationCode: "KRNT", arrivalTime: "01:38", departureTime: "01:40", delay: "-", distance: "398 km", isPassed: false, isCurrent: false },
-      { stationName: "Secunderabad", stationCode: "SC", arrivalTime: "06:05", departureTime: "06:20", delay: "-", distance: "646 km", isPassed: false, isCurrent: false },
-      { stationName: "Nagpur", stationCode: "NGP", arrivalTime: "12:10", departureTime: "12:25", delay: "-", distance: "1100 km", isPassed: false, isCurrent: false },
-      { stationName: "Bhopal Jn", stationCode: "BPL", arrivalTime: "17:45", departureTime: "17:55", delay: "-", distance: "1432 km", isPassed: false, isCurrent: false },
-      { stationName: "Agra Cantt", stationCode: "AGC", arrivalTime: "23:35", departureTime: "23:45", delay: "-", distance: "1808 km", isPassed: false, isCurrent: false },
-      { stationName: "H Nizamuddin", stationCode: "NZM", arrivalTime: "03:15", departureTime: "-", delay: "-", distance: "2019 km", isPassed: false, isCurrent: false },
-    ],
-  },
 ];
 
 // Get random test live data
@@ -126,7 +113,8 @@ export default function LiveTrainStatus() {
   const { t, isTesterMode } = useApp();
   const [trainNo, setTrainNo] = useState("");
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<LiveTrainData | null>(null);
+  const [liveData, setLiveData] = useState<LiveTrainAPIData | null>(null);
+  const [testData, setTestData] = useState<LiveTrainData | null>(null);
 
   const handleSearch = async () => {
     if (!trainNo) {
@@ -135,13 +123,14 @@ export default function LiveTrainStatus() {
     }
 
     setLoading(true);
-    setData(null);
+    setLiveData(null);
+    setTestData(null);
 
     // Use test data if tester mode is on
     if (isTesterMode) {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      const testData = getTestLiveData();
-      setData({ ...testData, trainNo });
+      const data = getTestLiveData();
+      setTestData({ ...data, trainNo });
       toast({ title: `${t("testerMode")}: ${t("success")}` });
       setLoading(false);
       return;
@@ -159,7 +148,13 @@ export default function LiveTrainStatus() {
         return;
       }
 
-      setData(result);
+      // Check for API error messages
+      if (result?.status === false || result?.message) {
+        toast({ title: result.message || "Could not fetch train status", variant: "destructive" });
+        return;
+      }
+
+      setLiveData(result);
     } catch (err) {
       console.error("Live train error:", err);
       toast({ title: t("error"), variant: "destructive" });
@@ -167,6 +162,9 @@ export default function LiveTrainStatus() {
       setLoading(false);
     }
   };
+
+  const trainData = liveData?.data;
+  const hasData = (liveData?.status === true && trainData) || testData;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -218,8 +216,8 @@ export default function LiveTrainStatus() {
           </div>
         </div>
 
-        {/* Results */}
-        {data && !data.error && (
+        {/* Real API Results */}
+        {liveData?.status === true && trainData && (
           <div className="glass-card p-4 animate-slide-up">
             {/* Train Info */}
             <div className="flex items-center gap-3 mb-4 pb-4 border-b border-border">
@@ -227,9 +225,9 @@ export default function LiveTrainStatus() {
                 <Navigation className="w-6 h-6 text-primary animate-pulse" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-foreground">{data.trainNo} - {data.trainName}</h3>
+                <h3 className="font-semibold text-foreground">{trainData.train_number} - {trainData.train_name}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {data.currentStation && <>{t("currentLocation")}: {data.currentStation}</>}
+                  {t("currentLocation")}: {trainData.current_station_name}
                 </p>
               </div>
               <Button variant="ghost" size="icon" onClick={handleSearch}>
@@ -238,22 +236,114 @@ export default function LiveTrainStatus() {
             </div>
 
             {/* Delay Info */}
-            {data.delay && (
-              <div className={`p-3 rounded-lg mb-4 ${data.delay.includes("On Time") ? "bg-success/10" : "bg-warning/10"}`}>
+            <div className={`p-3 rounded-lg mb-4 ${trainData.delay === 0 ? "bg-success/10" : "bg-warning/10"}`}>
+              <div className="flex items-center gap-2">
+                <Clock className={`w-4 h-4 ${trainData.delay === 0 ? "text-success" : "text-warning"}`} />
+                <span className={`font-medium ${trainData.delay === 0 ? "text-success" : "text-warning"}`}>
+                  {trainData.delay === 0 ? t("onTime") : `${trainData.delay} mins late`}
+                </span>
+              </div>
+            </div>
+
+            {/* Current Status */}
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-xs text-muted-foreground">ETA</p>
+                <p className="font-semibold text-foreground">{trainData.eta}</p>
+              </div>
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-xs text-muted-foreground">ETD</p>
+                <p className="font-semibold text-foreground">{trainData.etd}</p>
+              </div>
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-xs text-muted-foreground">Distance Covered</p>
+                <p className="font-semibold text-foreground">{trainData.distance_from_source} km</p>
+              </div>
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-xs text-muted-foreground">Total Distance</p>
+                <p className="font-semibold text-foreground">{trainData.total_distance} km</p>
+              </div>
+            </div>
+
+            {/* Next Stoppage */}
+            {trainData.next_stoppage_info && (
+              <div className="p-4 bg-primary/10 rounded-lg mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <MapPin className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium text-primary">{trainData.next_stoppage_info.next_stoppage_title}</span>
+                </div>
+                <p className="font-semibold text-foreground">{trainData.next_stoppage_info.next_stoppage}</p>
+                <p className="text-sm text-muted-foreground">{trainData.next_stoppage_info.next_stoppage_time_diff}</p>
+                {trainData.next_stoppage_info.next_stoppage_delay > 0 && (
+                  <p className="text-sm text-warning mt-1">Delay: {trainData.next_stoppage_info.next_stoppage_delay} mins</p>
+                )}
+              </div>
+            )}
+
+            {/* Current Location Info */}
+            {trainData.current_location_info && trainData.current_location_info.length > 0 && (
+              <div className="space-y-2 mb-4">
+                <h4 className="font-semibold text-foreground">{t("currentLocation")}</h4>
+                {trainData.current_location_info.map((info, i) => (
+                  <div key={i} className="p-3 bg-muted/30 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-muted-foreground mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm text-foreground">{info.readable_message || info.message}</p>
+                        <p className="text-xs text-muted-foreground">{info.label}</p>
+                        {info.hint && <p className="text-xs text-primary mt-1">{info.hint}</p>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Upcoming Stations Count */}
+            {trainData.upcoming_stations_count > 0 && (
+              <p className="text-sm text-muted-foreground text-center">
+                {trainData.upcoming_stations_count} stations remaining
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Test Mode Results */}
+        {testData && !testData.error && (
+          <div className="glass-card p-4 animate-slide-up">
+            {/* Train Info */}
+            <div className="flex items-center gap-3 mb-4 pb-4 border-b border-border">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Navigation className="w-6 h-6 text-primary animate-pulse" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-foreground">{testData.trainNo} - {testData.trainName}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {testData.currentStation && <>{t("currentLocation")}: {testData.currentStation}</>}
+                </p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={handleSearch}>
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* Delay Info */}
+            {testData.delay && (
+              <div className={`p-3 rounded-lg mb-4 ${testData.delay.includes("On Time") ? "bg-success/10" : "bg-warning/10"}`}>
                 <div className="flex items-center gap-2">
-                  <Clock className={`w-4 h-4 ${data.delay.includes("On Time") ? "text-success" : "text-warning"}`} />
-                  <span className={`font-medium ${data.delay.includes("On Time") ? "text-success" : "text-warning"}`}>
-                    {data.delay.includes("On Time") ? t("onTime") : data.delay}
+                  <Clock className={`w-4 h-4 ${testData.delay.includes("On Time") ? "text-success" : "text-warning"}`} />
+                  <span className={`font-medium ${testData.delay.includes("On Time") ? "text-success" : "text-warning"}`}>
+                    {testData.delay.includes("On Time") ? t("onTime") : testData.delay}
                   </span>
                 </div>
               </div>
             )}
 
             {/* Station Timeline */}
-            {data.stations && data.stations.length > 0 && (
+            {testData.stations && testData.stations.length > 0 && (
               <div className="space-y-0">
                 <h4 className="font-semibold text-foreground mb-4">{t("route")}</h4>
-                {data.stations.map((station, i) => (
+                {testData.stations.map((station, i) => (
                   <div key={i} className="flex items-start gap-3">
                     {/* Timeline dot */}
                     <div className="flex flex-col items-center">
@@ -261,7 +351,7 @@ export default function LiveTrainStatus() {
                         station.isCurrent ? "bg-primary animate-pulse" :
                         station.isPassed ? "bg-success" : "bg-muted"
                       }`} />
-                      {i < data.stations!.length - 1 && (
+                      {i < testData.stations!.length - 1 && (
                         <div className={`w-0.5 h-12 ${station.isPassed ? "bg-success" : "bg-muted"}`} />
                       )}
                     </div>
@@ -287,9 +377,9 @@ export default function LiveTrainStatus() {
             )}
 
             {/* Last Updated */}
-            {data.lastUpdated && (
+            {testData.lastUpdated && (
               <p className="text-xs text-muted-foreground text-center mt-4">
-                {t("lastUpdate")}: {data.lastUpdated}
+                {t("lastUpdate")}: {testData.lastUpdated}
               </p>
             )}
           </div>
