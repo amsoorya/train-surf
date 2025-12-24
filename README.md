@@ -19,6 +19,23 @@
 
 ---
 
+## 🚀 What's New (v2.0)
+
+- 🌍 **Multi-language Support** - 30+ languages including all Indian regional languages
+- 🧪 **Tester Mode** - Test all features with mock data (no API calls)
+- 🎫 **PNR Status Check** - Check booking status with 5+ test PNR variations
+- 🚂 **Live Train Tracking** - Real-time train location with 5+ test trains
+- 🔍 **Trains Between Stations** - Search trains with 16+ test routes
+- 💬 **Smart Chatbot (TrainBot)** - AI-powered FAQ assistant with 35+ topics & quick replies
+- 📲 **Enhanced PWA** - Better install prompts with iOS instructions
+- 🔔 **Update Notifications** - Auto-notify users of new versions
+- 📚 **App Tour** - Interactive onboarding guide for new users
+- ⭐ **Favorites System** - Save frequently used routes
+- 📜 **Search History** - Track past searches with results
+- 🌙 **Dark Mode** - Full theme support
+
+---
+
 ## Developer
 
 **Jaya Soorya**
@@ -89,18 +106,31 @@ TrainSurf automatically:
 - 📱 **PWA Support**: Install as native app on mobile devices
 - 🔐 **User Authentication**: Secure login with email/password
 - 📜 **Search History**: Track and revisit previous searches
+- ⭐ **Favorites**: Save frequently used train routes
+
+### Additional Services
+- 🎫 **PNR Status**: Check booking status with detailed passenger info
+- 🚂 **Live Train Tracking**: Real-time train location and delays
+- 🔍 **Trains Between Stations**: Find all trains on any route
+- 💬 **TrainBot**: AI chatbot for instant help and FAQs
 
 ### User Experience
 - 🎨 **Modern UI**: Beautiful purple-blue gradient theme
 - ✨ **Smooth Animations**: Polished micro-interactions
 - 🌓 **Dark Mode**: Full dark theme support
+- 🌍 **30+ Languages**: Hindi, Tamil, Bengali, Telugu, and more
 - 📍 **Station Autocomplete**: 120+ major stations with offline search
-- 🧪 **Sandbox Mode**: Test the algorithm without API calls
+- 🧪 **Tester Mode**: Test all features without API calls
 
-### Additional Features
-- 🔑 **Forgot Password**: Email-based password recovery
-- 📋 **Export Results**: Copy or download booking plans
-- 🕐 **Journey History**: View past searches and results
+### Tester Mode Features
+TrainSurf includes comprehensive test data for all features:
+
+| Feature | Test Data Count |
+|---------|-----------------|
+| PNR Status | 5 variations (CNF, WL, RAC) |
+| Live Train | 5 trains with full routes |
+| Trains Between | 16 popular routes |
+| Seat Stitching | Sample Delhi-Howrah path |
 
 ---
 
@@ -171,52 +201,6 @@ The algorithm uses a **backward binary search** strategy to find the optimal sea
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Pseudocode
-
-```typescript
-function findOptimalPath(stations, source, destination, classType, quota) {
-  // Base case: Check if direct path is available
-  const directStatus = await checkAvailability(source, destination);
-  if (isAvailable(directStatus)) {
-    return [{ from: source, to: destination, status: directStatus }];
-  }
-
-  // Binary search for the furthest reachable station
-  let left = sourceIndex;
-  let right = destIndex;
-  let bestReachable = -1;
-
-  while (left <= right) {
-    const mid = Math.floor((left + right) / 2);
-    const status = await checkAvailability(source, stations[mid]);
-    
-    if (isAvailable(status)) {
-      bestReachable = mid;
-      left = mid + 1;  // Try to reach further
-    } else {
-      right = mid - 1;  // Look closer
-    }
-  }
-
-  if (bestReachable === -1) {
-    return null;  // No path found
-  }
-
-  // Recursively find remaining path
-  const currentSegment = { 
-    from: source, 
-    to: stations[bestReachable] 
-  };
-  const remainingPath = await findOptimalPath(
-    stations, 
-    stations[bestReachable], 
-    destination
-  );
-
-  return [currentSegment, ...remainingPath];
-}
-```
-
 ### Time Complexity
 
 | Operation | Complexity |
@@ -228,19 +212,6 @@ function findOptimalPath(stations, source, destination, classType, quota) {
 Where:
 - `n` = Number of stations in route
 - `k` = Number of seat changes needed
-
-### Availability Status Parsing
-
-The algorithm recognizes these IRCTC statuses:
-
-| Status | Meaning | Available? |
-|--------|---------|------------|
-| `AVAILABLE-*` | Confirmed seats available | ✅ Yes |
-| `AVL *` | Seats available | ✅ Yes |
-| `RAC *` | Reservation Against Cancellation | ⚠️ Conditional |
-| `WL *` | Waitlisted | ❌ No |
-| `REGRET/WL` | Fully waitlisted | ❌ No |
-| `NOT AVAILABLE` | No seats | ❌ No |
 
 ---
 
@@ -276,7 +247,8 @@ The algorithm recognizes these IRCTC statuses:
 |---------|----------------|
 | Installable | Web App Manifest |
 | Offline Support | Service Worker |
-| Icons | Multiple sizes |
+| Update Notifications | SW Update Detection |
+| Icons | Multiple sizes (192, 512) |
 
 ---
 
@@ -292,12 +264,19 @@ trainsurf/
 ├── src/
 │   ├── components/
 │   │   ├── ui/                  # Shadcn UI components
+│   │   ├── AppTour.tsx          # Onboarding guide
+│   │   ├── BottomNav.tsx        # Navigation bar
 │   │   ├── Header.tsx           # App header
-│   │   ├── Logo.tsx             # Brand logo
+│   │   ├── InstallPrompt.tsx    # PWA install prompt
 │   │   ├── LoadingSpinner.tsx   # Loading states
+│   │   ├── OnboardingGuide.tsx  # First-time user guide
 │   │   ├── ResultsDisplay.tsx   # Algorithm results
 │   │   ├── SegmentCard.tsx      # Journey segment
-│   │   └── StationAutocomplete.tsx  # Station search
+│   │   ├── StationAutocomplete.tsx  # Station search
+│   │   ├── TopBar.tsx           # Theme/Language controls
+│   │   └── UpdateNotification.tsx   # Version updates
+│   ├── contexts/
+│   │   └── AppContext.tsx       # Theme, Language, Tester Mode
 │   ├── hooks/
 │   │   ├── use-mobile.tsx       # Mobile detection
 │   │   └── use-toast.ts         # Toast notifications
@@ -306,21 +285,30 @@ trainsurf/
 │   │       ├── client.ts        # Supabase client
 │   │       └── types.ts         # Database types
 │   ├── pages/
-│   │   ├── Auth.tsx             # Login/Signup/Forgot
+│   │   ├── Auth.tsx             # Login/Signup
+│   │   ├── Contact.tsx          # TrainBot chatbot
 │   │   ├── Dashboard.tsx        # Main search page
+│   │   ├── Favorites.tsx        # Saved routes
 │   │   ├── History.tsx          # Search history
+│   │   ├── LiveTrainStatus.tsx  # Train tracking
+│   │   ├── PNRStatus.tsx        # PNR checker
+│   │   ├── Profile.tsx          # User settings
 │   │   ├── Sandbox.tsx          # Test mode
+│   │   ├── TrainsBetween.tsx    # Train search
 │   │   └── NotFound.tsx         # 404 page
 │   ├── types/
 │   │   └── trainsurf.ts         # App types
 │   ├── App.tsx                  # App root
 │   ├── main.tsx                 # Entry point
-│   └── index.css                # Global styles
+│   └── index.css                # Global styles & themes
 ├── supabase/
 │   ├── config.toml              # Supabase config
 │   ├── functions/
-│   │   └── trainsurf/
-│   │       └── index.ts         # Edge function
+│   │   ├── trainsurf/           # Main algorithm
+│   │   ├── pnr-status/          # PNR check
+│   │   ├── live-train/          # Train tracking
+│   │   ├── trains-between/      # Train search
+│   │   └── translate/           # Multi-language
 │   └── migrations/              # Database migrations
 ├── index.html
 ├── tailwind.config.ts
@@ -363,7 +351,7 @@ trainsurf/
 
 5. **Open the app**
    ```
-   http://localhost:5173
+   http://localhost:8080
    ```
 
 ### Building for Production
@@ -376,35 +364,20 @@ The build output will be in the `dist/` directory.
 
 ---
 
-## API Integration
+## Supported Languages
 
-### IRCTC API (via RapidAPI)
+TrainSurf supports 30+ languages:
 
-TrainSurf uses the IRCTC API through RapidAPI for:
-
-1. **Get Train Route**
-   ```
-   GET /api/v1/getTrainRoute
-   Headers: x-rapidapi-key, x-rapidapi-host
-   Params: trainNo
-   ```
-
-2. **Check Seat Availability**
-   ```
-   GET /api/v3/checkSeatAvailability
-   Headers: x-rapidapi-key, x-rapidapi-host
-   Params: trainNo, fromStation, toStation, date, classType, quota
-   ```
-
-### Edge Function
-
-The `trainsurf` edge function handles:
-- Route fetching
-- Availability checking
-- Algorithm execution
-- Error handling
-
-Located at: `supabase/functions/trainsurf/index.ts`
+| Indian Languages | International |
+|------------------|---------------|
+| Hindi, Tamil, Telugu | English, Spanish |
+| Bengali, Marathi, Gujarati | French, German |
+| Kannada, Malayalam, Punjabi | Portuguese, Arabic |
+| Odia, Assamese, Urdu | Russian, Chinese |
+| Sanskrit, Nepali, Dogri | Japanese, Korean |
+| Kashmiri, Konkani, Maithili | - |
+| Manipuri, Santali, Sindhi | - |
+| Bodo (Tibetan) | - |
 
 ---
 
@@ -418,6 +391,11 @@ Located at: `supabase/functions/trainsurf/index.ts`
 | id | uuid | Primary key |
 | user_id | uuid | Auth user reference |
 | email | text | User email |
+| display_name | text | User name |
+| phone | text | Phone number |
+| age | integer | User age |
+| gender | text | User gender |
+| onboarding_completed | boolean | Tour status |
 | created_at | timestamptz | Creation timestamp |
 
 #### `search_history`
@@ -436,11 +414,18 @@ Located at: `supabase/functions/trainsurf/index.ts`
 | segments | jsonb | Journey segments |
 | created_at | timestamptz | Search timestamp |
 
-### Row Level Security (RLS)
-
-All tables have RLS enabled:
-- Users can only view/edit their own data
-- Policies use `auth.uid() = user_id`
+#### `favorites`
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| user_id | uuid | Auth user reference |
+| train_no | text | Train number |
+| source | text | Source station |
+| destination | text | Destination station |
+| class_type | text | Travel class |
+| quota | text | Booking quota |
+| nickname | text | Custom name |
+| created_at | timestamptz | Creation timestamp |
 
 ---
 
@@ -450,8 +435,8 @@ All tables have RLS enabled:
 
 1. **Authentication**
    - Email/password via Supabase Auth
-   - Secure password requirements (8+ chars, letters + numbers)
-   - Email redirect validation
+   - Secure password requirements
+   - Auto-confirm for development
 
 2. **API Security**
    - API keys stored as Supabase secrets
@@ -492,6 +477,7 @@ This project is for educational and personal use. The IRCTC API is subject to Ra
 - RapidAPI for API hosting
 - Supabase for backend infrastructure
 - Shadcn for the beautiful UI components
+- Lovable for the development platform
 
 ---
 

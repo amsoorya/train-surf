@@ -23,12 +23,24 @@ interface TrainResult {
   runningDays: string[];
 }
 
-// Test data for tester mode
+// Extended test data for tester mode
 const TEST_TRAINS: TrainResult[] = [
-  { trainNo: "12301", trainName: "Rajdhani Express", fromStation: "NDLS", toStation: "HWH", departureTime: "16:55", arrivalTime: "10:05", duration: "17h 10m", runningDays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] },
-  { trainNo: "12305", trainName: "Kolkata Rajdhani", fromStation: "NDLS", toStation: "HWH", departureTime: "17:00", arrivalTime: "10:15", duration: "17h 15m", runningDays: ["Mon", "Wed", "Fri"] },
-  { trainNo: "12259", trainName: "Duronto Express", fromStation: "NDLS", toStation: "HWH", departureTime: "20:15", arrivalTime: "14:30", duration: "18h 15m", runningDays: ["Tue", "Sat"] },
-  { trainNo: "12313", trainName: "Sealdah Rajdhani", fromStation: "NDLS", toStation: "SDAH", departureTime: "16:30", arrivalTime: "10:00", duration: "17h 30m", runningDays: ["Daily"] },
+  { trainNo: "12301", trainName: "Rajdhani Express", fromStation: "NDLS", toStation: "HWH", departureTime: "16:55", arrivalTime: "10:05+1", duration: "17h 10m", runningDays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] },
+  { trainNo: "12305", trainName: "Kolkata Rajdhani", fromStation: "NDLS", toStation: "HWH", departureTime: "17:00", arrivalTime: "10:15+1", duration: "17h 15m", runningDays: ["Mon", "Wed", "Fri"] },
+  { trainNo: "12259", trainName: "Duronto Express", fromStation: "NDLS", toStation: "HWH", departureTime: "20:15", arrivalTime: "14:30+1", duration: "18h 15m", runningDays: ["Tue", "Sat"] },
+  { trainNo: "12313", trainName: "Sealdah Rajdhani", fromStation: "NDLS", toStation: "SDAH", departureTime: "16:30", arrivalTime: "10:00+1", duration: "17h 30m", runningDays: ["Daily"] },
+  { trainNo: "12951", trainName: "Mumbai Rajdhani", fromStation: "BCT", toStation: "NDLS", departureTime: "17:00", arrivalTime: "08:35+1", duration: "15h 35m", runningDays: ["Daily"] },
+  { trainNo: "12952", trainName: "New Delhi Rajdhani", fromStation: "NDLS", toStation: "BCT", departureTime: "16:25", arrivalTime: "08:00+1", duration: "15h 35m", runningDays: ["Daily"] },
+  { trainNo: "12953", trainName: "August Kranti Rajdhani", fromStation: "BCT", toStation: "NZM", departureTime: "17:40", arrivalTime: "10:55+1", duration: "17h 15m", runningDays: ["Daily"] },
+  { trainNo: "12621", trainName: "Tamil Nadu Express", fromStation: "MAS", toStation: "NDLS", departureTime: "22:00", arrivalTime: "06:55+2", duration: "32h 55m", runningDays: ["Daily"] },
+  { trainNo: "12622", trainName: "Tamil Nadu Express", fromStation: "NDLS", toStation: "MAS", departureTime: "22:30", arrivalTime: "07:15+2", duration: "32h 45m", runningDays: ["Daily"] },
+  { trainNo: "12839", trainName: "Chennai Mail", fromStation: "HWH", toStation: "MAS", departureTime: "23:45", arrivalTime: "22:45+1", duration: "23h 00m", runningDays: ["Daily"] },
+  { trainNo: "12840", trainName: "Howrah Mail", fromStation: "MAS", toStation: "HWH", departureTime: "21:15", arrivalTime: "20:05+1", duration: "22h 50m", runningDays: ["Daily"] },
+  { trainNo: "22691", trainName: "Rajdhani Express", fromStation: "SBC", toStation: "NZM", departureTime: "20:10", arrivalTime: "03:15+2", duration: "31h 05m", runningDays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] },
+  { trainNo: "12627", trainName: "Karnataka Express", fromStation: "SBC", toStation: "NDLS", departureTime: "19:20", arrivalTime: "06:35+2", duration: "35h 15m", runningDays: ["Daily"] },
+  { trainNo: "12628", trainName: "Karnataka Express", fromStation: "NDLS", toStation: "SBC", departureTime: "21:15", arrivalTime: "08:15+2", duration: "35h 00m", runningDays: ["Daily"] },
+  { trainNo: "12723", trainName: "Telangana Express", fromStation: "NDLS", toStation: "SC", departureTime: "06:25", arrivalTime: "08:30+1", duration: "26h 05m", runningDays: ["Daily"] },
+  { trainNo: "12724", trainName: "Telangana Express", fromStation: "SC", toStation: "NDLS", departureTime: "18:10", arrivalTime: "20:25+1", duration: "26h 15m", runningDays: ["Daily"] },
 ];
 
 export default function TrainsBetween() {
