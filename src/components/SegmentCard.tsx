@@ -1,5 +1,5 @@
 import { Segment } from "@/types/trainsurf";
-import { ArrowRight, Check, AlertTriangle, X } from "lucide-react";
+import { TicketCard, StationDisplay, TicketFooter, StatusBadge } from "./TicketCard";
 import { cn } from "@/lib/utils";
 
 interface SegmentCardProps {
@@ -8,69 +8,57 @@ interface SegmentCardProps {
   total: number;
 }
 
-function getStatusStyle(status: string, isAvailable: boolean) {
+function getVariant(status: string, isAvailable: boolean): "default" | "success" | "warning" | "error" {
   const s = status.toUpperCase();
   
-  if (s.includes("AVAILABLE") || s.includes("CNF") || s.includes("CONFIRM") || isAvailable) {
-    return {
-      className: "status-available",
-      icon: Check,
-      label: status,
-    };
+  if (s.includes("AVAILABLE") || s.includes("AVL") || s.includes("CNF") || s.includes("CONFIRM") || isAvailable) {
+    return "success";
   }
   
   if (s.includes("RAC")) {
-    return {
-      className: "status-rac",
-      icon: AlertTriangle,
-      label: status,
-    };
+    return "warning";
   }
   
-  return {
-    className: "status-unavailable",
-    icon: X,
-    label: status,
-  };
+  return "error";
 }
 
 export function SegmentCard({ segment, index, total }: SegmentCardProps) {
-  const statusInfo = getStatusStyle(segment.status, segment.isAvailable);
-  const StatusIcon = statusInfo.icon;
+  const variant = getVariant(segment.status, segment.isAvailable);
 
   return (
-    <div 
-      className="segment-card p-4 animate-slide-up"
-      style={{ animationDelay: `${index * 100}ms` }}
+    <TicketCard 
+      variant={variant}
+      className="animate-slide-up hover-lift"
+      style={{ animationDelay: `${index * 100}ms` } as React.CSSProperties}
     >
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded-full">
+      {/* Booking number badge */}
+      <div className="absolute top-3 left-6 z-10">
+        <span className="text-[10px] font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full uppercase tracking-wider">
           Booking {index + 1} of {total}
         </span>
       </div>
       
-      <div className="flex items-center gap-3 mb-3">
-        <div className="flex-1">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">From</p>
-          <p className="text-lg font-bold text-foreground">{segment.from}</p>
-        </div>
-        
-        <div className="flex-shrink-0">
-          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <ArrowRight className="w-4 h-4 text-primary" />
-          </div>
-        </div>
-        
-        <div className="flex-1 text-right">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">To</p>
-          <p className="text-lg font-bold text-foreground">{segment.to}</p>
-        </div>
+      {/* Main station display with padding for badge */}
+      <div className="pt-10">
+        <StationDisplay
+          fromCode={segment.from}
+          toCode={segment.to}
+        />
       </div>
       
-      <div className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold", statusInfo.className)}>
-        <StatusIcon className="w-3 h-3" />
-        {statusInfo.label}
-      </div>
-    </div>
+      {/* Footer with status */}
+      <TicketFooter className="flex items-center justify-between">
+        <StatusBadge status={segment.status} isAvailable={segment.isAvailable} />
+        <div className="flex items-center gap-1">
+          <div className={cn(
+            "w-2 h-2 rounded-full",
+            segment.isAvailable ? "bg-success" : "bg-destructive"
+          )} />
+          <span className="text-xs text-muted-foreground">
+            {segment.isAvailable ? "Confirmed" : "Waitlisted"}
+          </span>
+        </div>
+      </TicketFooter>
+    </TicketCard>
   );
 }

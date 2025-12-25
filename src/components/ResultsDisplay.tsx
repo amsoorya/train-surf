@@ -1,7 +1,8 @@
 import { TrainSurfResult } from "@/types/trainsurf";
 import { SegmentCard } from "./SegmentCard";
+import { TicketCard, JourneyHeader, StationDisplay, TicketFooter } from "./TicketCard";
 import { Button } from "./ui/button";
-import { Copy, Download, RefreshCw, Check, AlertCircle } from "lucide-react";
+import { Copy, Download, RefreshCw, Check, AlertCircle, Sparkles, Ticket, ArrowRightLeft, Zap } from "lucide-react";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 
@@ -40,7 +41,7 @@ export function ResultsDisplay({ result, onRunAgain }: ResultsDisplayProps) {
 
   if (!result.success) {
     return (
-      <div className="glass-card p-6 text-center animate-scale-in">
+      <TicketCard variant="error" className="p-6 text-center animate-scale-in">
         <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
           <AlertCircle className="w-8 h-8 text-destructive" />
         </div>
@@ -54,47 +55,82 @@ export function ResultsDisplay({ result, onRunAgain }: ResultsDisplayProps) {
           <RefreshCw className="w-4 h-4 mr-2" />
           Try Again
         </Button>
-      </div>
+      </TicketCard>
     );
   }
 
   return (
-    <div className="space-y-6 animate-slide-up">
-      {/* Stats */}
+    <div className="space-y-5 animate-slide-up">
+      {/* Stats Cards - Ticket Style */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="glass-card p-4 text-center">
-          <p className="text-3xl font-bold text-primary">{result.segments.length}</p>
-          <p className="text-xs text-muted-foreground mt-1">Bookings</p>
-        </div>
-        <div className="glass-card p-4 text-center">
-          <p className="text-3xl font-bold text-primary">{result.seatChanges}</p>
-          <p className="text-xs text-muted-foreground mt-1">Seat Changes</p>
-        </div>
-        <div className="glass-card p-4 text-center">
-          <p className="text-3xl font-bold text-primary">{result.apiCalls}</p>
-          <p className="text-xs text-muted-foreground mt-1">API Calls</p>
-        </div>
+        <TicketCard className="p-4 text-center">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2">
+            <Ticket className="w-5 h-5 text-primary" />
+          </div>
+          <p className="text-2xl font-black text-primary">{result.segments.length}</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Bookings</p>
+        </TicketCard>
+        <TicketCard className="p-4 text-center">
+          <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center mx-auto mb-2">
+            <ArrowRightLeft className="w-5 h-5 text-accent" />
+          </div>
+          <p className="text-2xl font-black text-accent">{result.seatChanges}</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Changes</p>
+        </TicketCard>
+        <TicketCard className="p-4 text-center">
+          <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center mx-auto mb-2">
+            <Zap className="w-5 h-5 text-success" />
+          </div>
+          <p className="text-2xl font-black text-success">{result.apiCalls}</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">API Calls</p>
+        </TicketCard>
       </div>
 
-      {/* Success message */}
-      <div className="bg-success/10 border border-success/30 rounded-xl p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center flex-shrink-0">
-          <Check className="w-5 h-5 text-success" />
+      {/* Success Banner - Ticket Style */}
+      <TicketCard variant="success" className="overflow-visible">
+        <div className="px-6 py-4 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-success/20 flex items-center justify-center flex-shrink-0">
+            <Sparkles className="w-6 h-6 text-success" />
+          </div>
+          <div className="flex-1">
+            <p className="font-bold text-success text-lg">Optimal Journey Found!</p>
+            <p className="text-sm text-success/80">
+              {result.seatChanges === 0 
+                ? "Direct booking available - no seat changes needed!"
+                : `Only ${result.seatChanges} seat change${result.seatChanges > 1 ? 's' : ''} required`
+              }
+            </p>
+          </div>
         </div>
-        <div>
-          <p className="font-semibold text-success">Optimal Journey Found!</p>
-          <p className="text-sm text-success/80">
-            {result.seatChanges === 0 
-              ? "Direct booking available - no seat changes needed!"
-              : `Only ${result.seatChanges} seat change${result.seatChanges > 1 ? 's' : ''} required`
-            }
-          </p>
-        </div>
-      </div>
+      </TicketCard>
 
-      {/* Segments */}
+      {/* Journey Overview Ticket */}
+      {result.segments.length > 0 && (
+        <TicketCard>
+          <JourneyHeader 
+            trainNumber="Your Journey" 
+            duration={`${result.segments.length} segment${result.segments.length > 1 ? 's' : ''}`}
+          />
+          <StationDisplay
+            fromCode={result.segments[0].from}
+            fromName="Origin"
+            toCode={result.segments[result.segments.length - 1].to}
+            toName="Destination"
+          />
+          <TicketFooter className="flex items-center justify-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              Complete journey from {result.segments[0].from} to {result.segments[result.segments.length - 1].to}
+            </span>
+          </TicketFooter>
+        </TicketCard>
+      )}
+
+      {/* Segments Section */}
       <div className="space-y-3">
-        <h3 className="font-semibold text-foreground">Recommended Booking Plan</h3>
+        <div className="flex items-center gap-2 px-1">
+          <div className="w-1 h-5 rounded-full bg-primary" />
+          <h3 className="font-bold text-foreground">Recommended Booking Plan</h3>
+        </div>
         {result.segments.map((segment, index) => (
           <SegmentCard
             key={index}
@@ -129,7 +165,7 @@ export function ResultsDisplay({ result, onRunAgain }: ResultsDisplayProps) {
           onClick={onRunAgain}
         >
           <RefreshCw className="w-4 h-4" />
-          New Search
+          New
         </Button>
       </div>
     </div>
