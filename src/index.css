@@ -161,11 +161,43 @@
     @apply border border-border/50 rounded-2xl;
   }
 
-  /* Segment Card */
+  /* Ticket Card Effect */
+  .ticket-card {
+    @apply relative overflow-hidden rounded-2xl border-2 border-primary/20;
+    background: var(--gradient-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  .ticket-card::before {
+    content: '';
+    @apply absolute top-0 right-0 w-20 h-20 opacity-10;
+    background: radial-gradient(circle, hsl(var(--primary)) 0%, transparent 70%);
+  }
+
+  /* Segment Card - Ticket Style */
   .segment-card {
-    @apply relative overflow-hidden rounded-xl border-l-4 border-l-primary;
+    @apply relative overflow-hidden rounded-2xl border-2 border-primary/20;
     background: var(--gradient-card);
     box-shadow: var(--shadow-soft);
+  }
+
+  /* Ticket Perforations */
+  .ticket-perforation {
+    @apply relative;
+  }
+
+  .ticket-perforation::before,
+  .ticket-perforation::after {
+    content: '';
+    @apply absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-background border-2 border-border;
+  }
+
+  .ticket-perforation::before {
+    @apply -left-2;
+  }
+
+  .ticket-perforation::after {
+    @apply -right-2;
   }
 
   /* Animated skeleton loader */
@@ -217,6 +249,22 @@
 
   .status-unavailable {
     @apply bg-destructive/15 text-destructive border border-destructive/30;
+  }
+
+  /* Station Code Typography */
+  .station-code {
+    @apply text-2xl font-black tracking-tight;
+    font-feature-settings: "tnum" on, "lnum" on;
+  }
+
+  /* Journey Line */
+  .journey-line {
+    @apply relative flex items-center justify-center;
+  }
+
+  .journey-line::before {
+    content: '';
+    @apply absolute inset-x-0 top-1/2 -translate-y-1/2 h-0.5 border-t-2 border-dashed border-primary/30;
   }
 }
 
